@@ -11,21 +11,15 @@ def torch_to_np(tensor):
     return tensor.detach().cpu().numpy().astype("float64")
 
 
-def np_to_tensor(data_array, cuda=False, device=None):
+def np_to_tensor(data_array):
     if type(data_array) == list:
         tensor_list = []
         for element in data_array:
             data_tensor = torch.from_numpy(element).float()
-            if cuda:
-                data_tensor = (data_tensor.cuda() if device is None
-                               else data_tensor.cuda(device))
             tensor_list.append(data_tensor)
         data_tensor = tensor_list
     else:
         data_tensor = torch.from_numpy(data_array).float()
-        if cuda:
-            data_tensor = (data_tensor.cuda() if device is None
-                           else data_tensor.cuda(device))
     return data_tensor
 
 

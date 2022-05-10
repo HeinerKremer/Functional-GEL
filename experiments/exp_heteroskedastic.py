@@ -2,11 +2,13 @@ import torch
 import torch.nn as nn
 import numpy as np
 from experiments.abstract_experiment import AbstractExperiment
+from fgel.least_squares import OrdinaryLeastSquares
 
 
 def eval_model(t, theta, numpy=False):
     if not numpy:
-        t = torch.Tensor(t)
+        if not torch.is_tensor(t):
+            t = torch.tensor(t)
         return torch.sum(t * theta.reshape(1, -1), dim=1, keepdim=True).float() ** 1
     else:
         return np.sum(t * theta.reshape(1, -1), axis=1, keepdims=True) ** 1
@@ -38,13 +40,14 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         self.dim_theta = np.shape(self.theta0)[1]
         self.noise = noise
         self.heteroskedastic = heteroskedastic
-
-        super().__init__(self, psi_dim=1, theta_dim=self.dim_theta, z_dim=self.dim_theta)
+        super().__init__(self, theta_dim=self.dim_theta, z_dim=self.dim_theta)
 
     def get_model(self):
         return Model(dim_theta=self.dim_theta)
 
     def generate_data(self, num_data):
+        if num_data is None:
+            return None, None
         t = np.exp(np.random.uniform(-1.5, 1.5, (num_data, self.dim_theta)))
         error1 = []
         if self.heteroskedastic:
@@ -66,3 +69,23 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         y_test = eval_model(t_test, self.theta0, numpy=True)
         y_pred = model.forward(torch.tensor(data_test[0])).detach().numpy()
         return float(((y_test - y_pred) ** 2).mean())
+
+
+if __name__ == '__main__':
+    theta = 1.7
+    noise = 1.0
+
+    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise)
+    exp.setup_data(n_train=20, n_val=200, n_test=20000)
+
+    model = exp.get_model()
+    estimator = OrdinaryLeastSquares(model=model, psi_dim=1)
+
+    print('Parameters pre-train: ', estimator.model.get_parameters())
+    estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
+
+    train_risk = exp.eval_test_risk(model, exp.x_train)
+    test_risk = exp.eval_test_risk(model, exp.x_test)
+    print('Parameters: ', np.squeeze(model.get_parameters()), ' True: ', theta)
+    print('Train risk: ', train_risk)
+    print('Test risk: ', test_risk)

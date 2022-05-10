@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.least_squares import OrdinaryLeastSquares
 from fgel.utils.torch_utils import Parameter
 
 cvx_solver = cvx.MOSEK
@@ -17,9 +18,8 @@ class GeneralizedEL(AbstractEstimationMethod):
     def __init__(self, model, psi_dim, theta_optim_args,
                  max_num_epochs, eval_freq, max_no_improve=5, burn_in_cycles=5,
                  pretrain=False, verbose=False,
-                 divergence=None, n_sample=None,
-                 outeropt=None, inneropt=None, inneriters=None,):
-        AbstractEstimationMethod.__init__(self, model, psi_dim, n_sample)
+                 divergence=None, outeropt=None, inneropt=None, inneriters=None,):
+        AbstractEstimationMethod.__init__(self, model, psi_dim)
 
         self.divergence_type = divergence
         self.softplus = torch.nn.Softplus(beta=10)
@@ -134,10 +134,11 @@ class GeneralizedEL(AbstractEstimationMethod):
 
     """------------- Methods for standard finite dimensional GEL to be overridden for FGEL ------------"""
     def compute_alpha_psi(self, x, z):
-        return torch.einsum('ir, ir -> i', self.alpha.params, self.model.psi(x, z))
+        return self.model.psi(x) @ torch.transpose(self.alpha.params, 1, 0)
 
     def objective(self, x, z, *args, **kwargs):
-        objective = 1/self.n_sample * torch.sum(self.gel_function(self.compute_alpha_psi(x, z)))
+        n_sample = z.shape[0]
+        objective = 1/n_sample * torch.sum(self.gel_function(self.compute_alpha_psi(x, z)))
         return objective
 
     """--------------------- Optimization methods for theta ---------------------"""
@@ -179,14 +180,15 @@ class GeneralizedEL(AbstractEstimationMethod):
         with torch.no_grad():
             x = [xi.numpy() for xi in x_tensor]
             z = z_tensor.numpy()
+            n_sample = z.shape[0]
 
             alpha = cvx.Variable(shape=(1, self.psi_dim))   # (1, k)
-            psi = self.model.psi(x, z).detach().numpy()   # (n_sample, k)
+            psi = self.model.psi(x).detach().numpy()   # (n_sample, k)
             alpha_psi = psi @ cvx.transpose(alpha)    # (n_sample, 1)
 
-            objective = 1/self.n_sample * cvx.sum(self.gel_function(alpha_psi, cvxpy=True))
+            objective = 1/n_sample * cvx.sum(self.gel_function(alpha_psi, cvxpy=True))
             if self.divergence_type == 'log':
-                constraint = [alpha_psi <= 1 - self.n_sample]
+                constraint = [alpha_psi <= 1 - n_sample]
             else:
                 constraint = []
             problem = cvx.Problem(cvx.Maximize(objective), constraint)
@@ -222,21 +224,19 @@ class GeneralizedEL(AbstractEstimationMethod):
                     self.alpha.update_params(alpha)
             return
 
-    def init_training(self, x_tensor, z_tensor, z_dev_tensor):
+    def init_training(self, x_tensor, z_tensor, z_val_tensor):
         self.alpha.init_params()
         self.set_optimizers(self.alpha)
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)
 
-    def _fit_internal(self, x, z, x_dev, z_dev, show_plots):
+    def _fit_internal(self, x, z, x_val, z_val, show_plots):
         x_tensor = self._to_tensor(x)
         z_tensor = self._to_tensor(z)
-        x_dev_tensor = self._to_tensor(x_dev)
-        z_dev_tensor = self._to_tensor(z_dev)
 
-        self.init_training(x_tensor, z_tensor, z_dev_tensor)
+        self.init_training(x_tensor, z_tensor, z_val)
 
-        min_dev_loss = float("inf")
+        min_val_loss = float("inf")
         time_0 = time.time()
         num_no_improve = 0
         cycle_num = 0
@@ -253,13 +253,13 @@ class GeneralizedEL(AbstractEstimationMethod):
 
             if epoch_i % self.eval_freq == 0:
                 cycle_num += 1
-                dev_loss = self.calc_mmr_loss(x_dev_tensor, self.kernel_z_val)
+                val_mmr_loss = self._calc_val_mmr(x_val, z_val)
                 if self.verbose:
-                    dev_game_obj = self.objective(x_dev_tensor, z_dev_tensor)
-                    print("epoch %d, game-obj=%f, def-loss=%f"
-                          % (epoch_i, dev_game_obj, dev_loss))
-                if dev_loss < min_dev_loss:
-                    min_dev_loss = dev_loss
+                    val_obj = self.objective(x_val, z_val)
+                    print("epoch %d, val-obj=%f, mmr-loss=%f"
+                          % (epoch_i, val_obj, val_mmr_loss))
+                if val_mmr_loss < min_val_loss:
+                    min_val_loss = val_mmr_loss
                     num_no_improve = 0
                 elif cycle_num > self.burn_in_cycles:
                     num_no_improve += 1
@@ -360,3 +360,25 @@ class GeneralizedEL(AbstractEstimationMethod):
     #         ax.imshow(profile_divergence, aspect='auto', extent=([theta_range1[0], theta_range1[1], theta_range2[0], theta_range2[1]]))
     #         plt.show()
     #     return profile_divergence
+
+if __name__ == '__main__':
+    from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
+
+    theta = 1.7
+    noise = 1.0
+
+    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise)
+    exp.setup_data(n_train=200, n_val=2000, n_test=20000)
+
+    model = exp.get_model()
+    estimator = GeneralizedEL(model=model, psi_dim=1, theta_optim_args={}, max_num_epochs=100, eval_freq=50,
+                              divergence='kl', outeropt='lbfgs', inneropt='cvxpy', inneriters=100)
+
+    print('Parameters pre-train: ', estimator.model.get_parameters())
+    estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
+
+    train_risk = exp.eval_test_risk(model, exp.x_train)
+    test_risk = exp.eval_test_risk(model, exp.x_test)
+    print('Parameters: ', np.squeeze(model.get_parameters()), ' True: ', theta)
+    print('Train risk: ', train_risk)
+    print('Test risk: ', test_risk)

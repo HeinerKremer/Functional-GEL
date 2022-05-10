@@ -25,13 +25,6 @@ class KernelFGEL(GeneralizedEL):
         self.alpha = Parameter(shape=(self.n_sample, self.psi_dim))
         self.set_optimizers(self.alpha)
 
-    def set_kernel(self, z, z_val=None):
-        if self.kernel_z is None:
-            self.kernel_z = torch.tensor(get_rbf_kernel(z, z, **self.kernel_args), dtype=torch.float32)
-            self.k_cholesky = torch.tensor(np.transpose(compute_cholesky_factor(self.kernel_z.detach().numpy())))
-        if z_val is not None:
-            self.kernel_z_val = get_rbf_kernel(z_val, z_val, **self.kernel_args)
-
     def compute_alpha_psi(self, x, z):
         return torch.einsum('jr, ji, ir -> i', self.alpha.params, self.kernel_z, self.model.psi(x, z))
 
