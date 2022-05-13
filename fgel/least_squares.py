@@ -25,22 +25,8 @@ class OrdinaryLeastSquares(AbstractEstimationMethod):
 
 
 if __name__ == '__main__':
-    from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
+    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    theta = 1.7
-    noise = 1.0
-
-    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise)
-    exp.setup_data(n_train=200, n_val=2000, n_test=20000)
-
-    model = exp.get_model()
-    estimator = OrdinaryLeastSquares(model=model, psi_dim=1)
-
-    print('Parameters pre-train: ', estimator.model.get_parameters())
-    estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
-
-    train_risk = exp.eval_test_risk(model, exp.x_train)
-    test_risk = exp.eval_test_risk(model, exp.x_test)
-    print('Parameters: ', np.squeeze(model.get_parameters()), ' True: ', theta)
-    print('Train risk: ', train_risk)
-    print('Test risk: ', test_risk)
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=20,
+                                         estimatortype=OrdinaryLeastSquares)
+    print('Thetas: ', results['theta'])

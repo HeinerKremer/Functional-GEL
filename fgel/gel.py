@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from fgel.abstract_estimation_method import AbstractEstimationMethod
-from fgel.least_squares import OrdinaryLeastSquares
 from fgel.utils.torch_utils import Parameter
 
 cvx_solver = cvx.MOSEK
@@ -18,8 +17,8 @@ class GeneralizedEL(AbstractEstimationMethod):
     def __init__(self, model, psi_dim, theta_optim_args,
                  max_num_epochs, eval_freq, max_no_improve=5, burn_in_cycles=5,
                  pretrain=False, verbose=False,
-                 divergence=None, outeropt=None, inneropt=None, inneriters=None,):
-        AbstractEstimationMethod.__init__(self, model, psi_dim)
+                 divergence=None, outeropt=None, inneropt=None, inneriters=None, kernel_args=None):
+        AbstractEstimationMethod.__init__(self, model, psi_dim, kernel_args)
 
         self.divergence_type = divergence
         self.softplus = torch.nn.Softplus(beta=10)
@@ -47,29 +46,32 @@ class GeneralizedEL(AbstractEstimationMethod):
     def set_divergence_function(self):
         if self.divergence_type == 'log':
             def divergence(weights=None, cvxpy=False):
+                n_sample = weights.shape[0]
                 if cvxpy:
-                    return - cvx.sum(cvx.log(self.n_sample * weights))
+                    return - cvx.sum(cvx.log(n_sample * weights))
                 elif isinstance(weights, np.ndarray):
-                    return - np.sum(np.log(self.n_sample * weights))
+                    return - np.sum(np.log(n_sample * weights))
                 else:
-                    return - torch.sum(torch.log(self.n_sample * weights))
+                    return - torch.sum(torch.log(n_sample * weights))
 
         elif self.divergence_type == 'chi2':
             def divergence(weights=None, cvxpy=False):
+                n_sample = weights.shape[0]
                 if cvxpy:
-                    return cvx.sum_squares(self.n_sample * weights - 1)
+                    return cvx.sum_squares(n_sample * weights - 1)
                 elif isinstance(weights, np.ndarray):
-                    return np.sum(np.square(self.n_sample * weights - 1))
+                    return np.sum(np.square(n_sample * weights - 1))
                 else:
-                    return torch.sum(torch.square(self.n_sample * weights - 1))
+                    return torch.sum(torch.square(n_sample * weights - 1))
         elif self.divergence_type == 'kl':
             def divergence(weights=None, cvxpy=False):
+                n_sample = weights.shape[0]
                 if cvxpy:
-                    return cvx.sum(weights * cvx.log(self.n_sample * weights))
+                    return cvx.sum(weights * cvx.log(n_sample * weights))
                 elif isinstance(weights, np.ndarray):
-                    return np.sum(weights * np.log(self.n_sample * weights))
+                    return np.sum(weights * np.log(n_sample * weights))
                 else:
-                    return torch.sum(weights * torch.log(self.n_sample * weights))
+                    return torch.sum(weights * torch.log(n_sample * weights))
         else:
             raise NotImplementedError()
         return divergence
@@ -78,7 +80,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.divergence_type == 'log':
             def divergence(x=None, cvxpy=False):
                 if not cvxpy:
-                    return torch.log(self.softplus(1 - x)+1/self.n_sample)
+                    return torch.log(self.softplus(1 - x) + 1)
                 else:
                     return cvx.log(1 - x)
 
@@ -137,8 +139,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         return self.model.psi(x) @ torch.transpose(self.alpha.params, 1, 0)
 
     def objective(self, x, z, *args, **kwargs):
-        n_sample = z.shape[0]
-        objective = 1/n_sample * torch.sum(self.gel_function(self.compute_alpha_psi(x, z)))
+        objective = torch.mean(self.gel_function(self.compute_alpha_psi(x, z)))
         return objective
 
     """--------------------- Optimization methods for theta ---------------------"""
@@ -362,23 +363,10 @@ class GeneralizedEL(AbstractEstimationMethod):
     #     return profile_divergence
 
 if __name__ == '__main__':
-    from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
+    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    theta = 1.7
-    noise = 1.0
-
-    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise)
-    exp.setup_data(n_train=200, n_val=2000, n_test=20000)
-
-    model = exp.get_model()
-    estimator = GeneralizedEL(model=model, psi_dim=1, theta_optim_args={}, max_num_epochs=100, eval_freq=50,
-                              divergence='kl', outeropt='lbfgs', inneropt='cvxpy', inneriters=100)
-
-    print('Parameters pre-train: ', estimator.model.get_parameters())
-    estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
-
-    train_risk = exp.eval_test_risk(model, exp.x_train)
-    test_risk = exp.eval_test_risk(model, exp.x_test)
-    print('Parameters: ', np.squeeze(model.get_parameters()), ' True: ', theta)
-    print('Train risk: ', train_risk)
-    print('Test risk: ', test_risk)
+    estimatorkwargs = dict(theta_optim_args={}, max_num_epochs=100, eval_freq=50,
+                           divergence='chi2', outeropt='lbfgs', inneropt='cvxpy', inneriters=100)
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=10,
+                                         estimatortype=GeneralizedEL, estimatorkwargs=estimatorkwargs)
+    print('Thetas: ', results['theta'])

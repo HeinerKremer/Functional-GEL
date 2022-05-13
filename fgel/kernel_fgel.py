@@ -12,21 +12,21 @@ cvx_solver = cvx.MOSEK
 
 class KernelFGEL(GeneralizedEL):
 
-    def __init__(self, kernel_args=None, reg_param=1e-6, **kwargs):
+    def __init__(self, reg_param=1e-6, **kwargs):
         super().__init__(**kwargs)
-
         self.reg_param = reg_param
 
-        self.kernel_args = kernel_args
-        self.kernel_z = None
-        self.k_cholesky = None
-        self.kernel_z_val = None
+        # For KernelFGEL alpha depends on sample size and will be initialized together with the kernel
+        self.alpha = None
 
-        self.alpha = Parameter(shape=(self.n_sample, self.psi_dim))
-        self.set_optimizers(self.alpha)
+    def set_kernel(self, z, z_val=None):
+        super().set_kernel(z=z, z_val=z_val)
+        if self.alpha is None:
+            self.alpha = Parameter(shape=(self.kernel_z.shape[0], self.psi_dim))
+            self.set_optimizers(self.alpha)
 
     def compute_alpha_psi(self, x, z):
-        return torch.einsum('jr, ji, ir -> i', self.alpha.params, self.kernel_z, self.model.psi(x, z))
+        return torch.einsum('jr, ji, ir -> i', self.alpha.params, self.kernel_z, self.model.psi(x))
 
     def get_rkhs_norm(self):
         return torch.einsum('ir, ij, jr ->', self.alpha.params, self.kernel_z, self.alpha.params)
@@ -34,27 +34,27 @@ class KernelFGEL(GeneralizedEL):
     def objective(self, x, z, *args, **kwargs):
         self.set_kernel(z)
         alpha_k_psi = self.compute_alpha_psi(x, z)
-        objective = (1/self.n_sample * torch.sum(self.gel_function(alpha_k_psi))
-                     - self.reg_param/2 * self.get_rkhs_norm())
+        objective = torch.mean(self.gel_function(alpha_k_psi)) - self.reg_param/2 * self.get_rkhs_norm()
         return objective
 
     def optimize_alpha_cvxpy(self, x_tensor, z_tensor):
         """CVXPY alpha optimization for kernelized objective"""
+        n_sample = z_tensor.shape[0]
         self.set_kernel(z_tensor)
 
         with torch.no_grad():
             try:
                 x = [xi.numpy() for xi in x_tensor]
-                alpha = cvx.Variable(shape=(self.n_sample, self.psi_dim))
+                alpha = cvx.Variable(shape=(n_sample, self.psi_dim))
                 psi = self.model.psi(x).detach().numpy()
-                alpha_psi = np.zeros(self.n_sample)
+                alpha_psi = np.zeros(n_sample)
                 for k in range(self.psi_dim):
                     alpha_psi += alpha[:, k] @ self.kernel_z.detach().numpy() @ cvx.diag(psi[:, k])
 
-                objective = (1/self.n_sample * cvx.sum(self.gel_function(alpha_psi, cvxpy=True))
+                objective = (1/n_sample * cvx.sum(self.gel_function(alpha_psi, cvxpy=True))
                              - self.reg_param/2 * cvx.square(cvx.norm(cvx.transpose(alpha) @ self.k_cholesky.detach().numpy())))
                 if self.divergence_type == 'log':
-                    constraint = [alpha_psi <= 1 - self.n_sample]
+                    constraint = [alpha_psi <= 1 - n_sample]
                 else:
                     constraint = []
                 problem = cvx.Problem(cvx.Maximize(objective), constraint)
@@ -72,12 +72,23 @@ class KernelFGEL(GeneralizedEL):
         if mmr:
             optimizer = torch.optim.LBFGS(self.model.parameters(),
                                           line_search_fn="strong_wolfe")
+            n_sample = x.shape[0]
             def closure():
                 optimizer.zero_grad()
                 psi = self.model.psi(x, z)
-                loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z, psi) / (self.n_sample ** 2)
+                loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z, psi) / (n_sample ** 2)
                 loss.backward()
                 return loss
             optimizer.step(closure)
         else:
             super()._pretrain_theta(x, z)
+
+
+if __name__ == '__main__':
+    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
+
+    estimatorkwargs = dict(theta_optim_args={}, max_num_epochs=100, eval_freq=50,
+                           divergence='chi2', outeropt='lbfgs', inneropt='lbfgs', inneriters=100)
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=20,
+                                         estimatortype=KernelFGEL, estimatorkwargs=estimatorkwargs)
+    print('Thetas: ', results['theta'])

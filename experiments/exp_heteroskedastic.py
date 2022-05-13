@@ -71,21 +71,32 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         return float(((y_test - y_pred) ** 2).mean())
 
 
+def run_heteroskedastic_n_times(theta, noise, n_train, repititions, estimatortype, estimatorkwargs=None):
+    if estimatorkwargs is None:
+        estimatorkwargs = {}
+    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise, heteroskedastic=True)
+    train_risks = []
+    test_risks = []
+    mses = []
+    thetas = []
+
+    np.random.seed(12345)
+    for i in range(repititions):
+        exp.setup_data(n_train=n_train, n_val=n_train, n_test=20000)
+        model = exp.get_model()
+        estimator = estimatortype(model=model, psi_dim=1, **estimatorkwargs)
+        estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
+        train_risks.append(exp.eval_test_risk(model, exp.x_train))
+        test_risks.append(exp.eval_test_risk(model, exp.x_test))
+        mses.append(np.mean(np.square(np.squeeze(model.get_parameters()) - exp.theta0)))
+        thetas.append(float(np.squeeze(model.get_parameters())))
+    print(rf'Test risk: {np.mean(test_risks)} $\pm$ {np.std(test_risks)}')
+    print(rf'Parameter MSE: {np.mean(mses)} $\pm$ {np.std(mses)}')
+    results = {'theta': thetas, 'test_risk': test_risks, 'mse': mses}
+    return results
+
+
 if __name__ == '__main__':
-    theta = 1.7
-    noise = 1.0
-
-    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise)
-    exp.setup_data(n_train=20, n_val=200, n_test=20000)
-
-    model = exp.get_model()
-    estimator = OrdinaryLeastSquares(model=model, psi_dim=1)
-
-    print('Parameters pre-train: ', estimator.model.get_parameters())
-    estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
-
-    train_risk = exp.eval_test_risk(model, exp.x_train)
-    test_risk = exp.eval_test_risk(model, exp.x_test)
-    print('Parameters: ', np.squeeze(model.get_parameters()), ' True: ', theta)
-    print('Train risk: ', train_risk)
-    print('Test risk: ', test_risk)
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=2000, repititions=10,
+                                         estimatortype=OrdinaryLeastSquares)
+    print('Thetas: ', results['theta'])

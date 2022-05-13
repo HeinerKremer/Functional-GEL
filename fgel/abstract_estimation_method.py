@@ -3,6 +3,7 @@ from fgel.utils.torch_utils import np_to_tensor
 import numpy as np
 import torch
 
+
 class AbstractEstimationMethod:
     def __init__(self, model, psi_dim, kernel_args=None):
         self.model = model
@@ -10,7 +11,9 @@ class AbstractEstimationMethod:
         self.is_fit = False
 
         # For validation purposes all methods use the kernel MMR loss and therefore require the kernel Gram matrices
-        self.kernel_args = kernel_args if kernel_args is not None else {}
+        if kernel_args is None:
+            kernel_args = {}
+        self.kernel_args = kernel_args
         self.kernel_z = None
         self.k_cholesky = None
         self.kernel_z_val = None
@@ -26,7 +29,7 @@ class AbstractEstimationMethod:
 
     def set_kernel(self, z, z_val=None):
         if self.kernel_z is None and z is not None:
-            self.kernel_z = torch.tensor(get_rbf_kernel(z, z, **self.kernel_args), dtype=torch.float32)
+            self.kernel_z = get_rbf_kernel(z, z, **self.kernel_args).type(torch.float32)
             self.k_cholesky = torch.tensor(np.transpose(compute_cholesky_factor(self.kernel_z.detach().numpy())))
         if z_val is not None:
             self.kernel_z_val = get_rbf_kernel(z_val, z_val, **self.kernel_args)
@@ -40,7 +43,7 @@ class AbstractEstimationMethod:
         self.set_kernel(z=None, z_val=z_val)
         psi = self.model.psi(x_val)
         loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z_val, psi) / (n ** 2)
-        return loss / (n ** 2)
+        return loss
 
     def _to_tensor(self, data_array):
         return np_to_tensor(data_array)
