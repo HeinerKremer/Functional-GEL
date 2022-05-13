@@ -23,7 +23,10 @@ class KernelFGEL(GeneralizedEL):
         super().set_kernel(z=z, z_val=z_val)
         if self.alpha is None:
             self.alpha = Parameter(shape=(self.kernel_z.shape[0], self.psi_dim))
-            self.set_optimizers(self.alpha)
+
+    def init_training(self, x_tensor, z_tensor=None, z_val_tensor=None):
+        self.set_kernel(z_tensor, z_val_tensor)
+        super().init_training(x_tensor, z_tensor)
 
     def compute_alpha_psi(self, x, z):
         return torch.einsum('jr, ji, ir -> i', self.alpha.params, self.kernel_z, self.model.psi(x))
@@ -63,25 +66,6 @@ class KernelFGEL(GeneralizedEL):
             except:
                 print('CVXPY failed. Using old alpha value')
         return
-
-    def init_training(self, x_tensor, z_tensor=None, z_dev_tensor=None):
-        self.set_kernel(z_tensor, z_dev_tensor)
-        super().init_training(x_tensor, z_tensor, z_dev_tensor)
-
-    def _pretrain_theta(self, x, z, mmr=True):
-        if mmr:
-            optimizer = torch.optim.LBFGS(self.model.parameters(),
-                                          line_search_fn="strong_wolfe")
-            n_sample = x.shape[0]
-            def closure():
-                optimizer.zero_grad()
-                psi = self.model.psi(x, z)
-                loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z, psi) / (n_sample ** 2)
-                loss.backward()
-                return loss
-            optimizer.step(closure)
-        else:
-            super()._pretrain_theta(x, z)
 
 
 if __name__ == '__main__':

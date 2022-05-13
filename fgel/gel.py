@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.oadam import OAdam
 from fgel.utils.torch_utils import Parameter
 
 cvx_solver = cvx.MOSEK
@@ -14,11 +15,14 @@ cvx_solver = cvx.MOSEK
 
 class GeneralizedEL(AbstractEstimationMethod):
 
-    def __init__(self, model, psi_dim, theta_optim_args,
-                 max_num_epochs, eval_freq, max_no_improve=5, burn_in_cycles=5,
-                 pretrain=False, verbose=False,
-                 divergence=None, outeropt=None, inneropt=None, inneriters=None, kernel_args=None):
-        AbstractEstimationMethod.__init__(self, model, psi_dim, kernel_args)
+    def __init__(self, model,
+                 max_num_epochs, eval_freq, max_no_improve=5, burn_in_cycles=5, pretrain=False, theta_optim_args=None,
+                 divergence=None, outeropt=None, inneropt=None, inneriters=None, kernel_args=None,
+                 verbose=False):
+        AbstractEstimationMethod.__init__(self, model, kernel_args)
+
+        if theta_optim_args is None:
+            theta_optim_args = {'lr': 5e-2}
 
         self.divergence_type = divergence
         self.softplus = torch.nn.Softplus(beta=10)
@@ -225,7 +229,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                     self.alpha.update_params(alpha)
             return
 
-    def init_training(self, x_tensor, z_tensor, z_val_tensor):
+    def init_training(self, x_tensor, z_tensor, z_val_tensor=None):
         self.alpha.init_params()
         self.set_optimizers(self.alpha)
         if self.pretrain:
@@ -235,7 +239,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         x_tensor = self._to_tensor(x)
         z_tensor = self._to_tensor(z)
 
-        self.init_training(x_tensor, z_tensor, z_val)
+        self.init_training(x_tensor, z_tensor)
 
         min_val_loss = float("inf")
         time_0 = time.time()
@@ -275,13 +279,18 @@ class GeneralizedEL(AbstractEstimationMethod):
             ax.set_title('')
             plt.show()
 
-    def _pretrain_theta(self, x, z, **kwargs):
+    def _pretrain_theta(self, x, z, mmr=False):
         optimizer = torch.optim.LBFGS(self.model.parameters(),
                                       line_search_fn="strong_wolfe")
+
         def closure():
             optimizer.zero_grad()
-            psi_x_z = self.model.psi(x, z)
-            loss = (psi_x_z ** 2).mean()
+            psi = self.model.psi(x)
+            if mmr:
+                self.set_kernel(z=z)
+                loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z, psi) / (x.shape[0] ** 2)
+            else:
+                loss = (psi ** 2).mean()
             loss.backward()
             return loss
         optimizer.step(closure)

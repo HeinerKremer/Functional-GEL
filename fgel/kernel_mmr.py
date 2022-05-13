@@ -5,8 +5,8 @@ from fgel.abstract_estimation_method import AbstractEstimationMethod
 
 
 class KernelMMR(AbstractEstimationMethod):
-    def __init__(self, model, psi_dim, kernel_args=None, verbose=False):
-        AbstractEstimationMethod.__init__(self, model, psi_dim, kernel_args)
+    def __init__(self, model, kernel_args=None, verbose=False):
+        AbstractEstimationMethod.__init__(self, model, kernel_args)
         self.verbose = verbose
 
     def _fit_internal(self, x, z, x_val, z_val, show_plots=False):

@@ -4,8 +4,8 @@ import numpy as np
 
 
 class OrdinaryLeastSquares(AbstractEstimationMethod):
-    def __init__(self, model, psi_dim):
-        AbstractEstimationMethod.__init__(self, model, psi_dim)
+    def __init__(self, model):
+        AbstractEstimationMethod.__init__(self, model)
 
     def _fit_internal(self, x, z, x_dev, z_dev, show_plots=False):
         x_tensor = self._to_tensor(x)

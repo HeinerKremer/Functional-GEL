@@ -5,9 +5,9 @@ import torch
 
 
 class AbstractEstimationMethod:
-    def __init__(self, model, psi_dim, kernel_args=None):
+    def __init__(self, model, kernel_args=None):
         self.model = model
-        self.psi_dim = psi_dim
+        self.psi_dim = self.model.psi_dim
         self.is_fit = False
 
         # For validation purposes all methods use the kernel MMR loss and therefore require the kernel Gram matrices

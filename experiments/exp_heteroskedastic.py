@@ -18,6 +18,7 @@ class Model(nn.Module):
     def __init__(self, dim_theta):
         nn.Module.__init__(self)
         self.theta = nn.Parameter(torch.FloatTensor([[0.5] * dim_theta]))
+        self.psi_dim = 1
 
     def forward(self, t):
         return eval_model(t, torch.reshape(self.theta, [1, -1]))
@@ -84,7 +85,7 @@ def run_heteroskedastic_n_times(theta, noise, n_train, repititions, estimatortyp
     for i in range(repititions):
         exp.setup_data(n_train=n_train, n_val=n_train, n_test=20000)
         model = exp.get_model()
-        estimator = estimatortype(model=model, psi_dim=1, **estimatorkwargs)
+        estimator = estimatortype(model=model, **estimatorkwargs)
         estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
         train_risks.append(exp.eval_test_risk(model, exp.x_train))
         test_risks.append(exp.eval_test_risk(model, exp.x_test))
