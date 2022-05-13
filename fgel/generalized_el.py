@@ -4,10 +4,9 @@ import cvxpy as cvx
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from fgel.abstract_estimation_method import AbstractEstimationMethod
-from fgel.oadam import OAdam
+from fgel.utils.oadam import OAdam
 from fgel.utils.torch_utils import Parameter
 
 cvx_solver = cvx.MOSEK

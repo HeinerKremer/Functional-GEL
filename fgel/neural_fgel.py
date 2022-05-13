@@ -1,9 +1,8 @@
 import math
 import time
-import numpy as np
 import torch
-from fgel.gel import GeneralizedEL
-from fgel.oadam import OAdam
+from fgel.generalized_el import GeneralizedEL
+from fgel.utils.oadam import OAdam
 from utils.torch_utils import BatchIter, ModularMLPModel
 
 
@@ -114,3 +113,4 @@ if __name__ == '__main__':
     results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=10,
                                          estimatortype=NeuralFGEL, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])
+    

@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-from fgel.gel import GeneralizedEL
+from fgel.generalized_el import GeneralizedEL
 from fgel.utils.torch_utils import Parameter
 from fgel.utils.rkhs_utils import get_rbf_kernel, compute_cholesky_factor
 

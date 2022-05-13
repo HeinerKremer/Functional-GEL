@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from experiments.abstract_experiment import AbstractExperiment
-from fgel.least_squares import OrdinaryLeastSquares
+from fgel.baselines.least_squares import OrdinaryLeastSquares
 
 
 def eval_model(t, theta, numpy=False):
