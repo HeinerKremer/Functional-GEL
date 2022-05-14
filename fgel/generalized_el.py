@@ -234,7 +234,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)
 
-    def _fit_internal(self, x, z, x_val, z_val, show_plots):
+    def _fit_internal(self, x, z, x_val, z_val, debugging=False):
         x_tensor = self._to_tensor(x)
         z_tensor = self._to_tensor(z)
 
@@ -272,7 +272,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.verbose:
             print("time taken:", time.time() - time_0)
 
-        if show_plots:
+        if debugging:
             fig, ax = plt.subplots(1)
             ax.plot(losses[1:])
             ax.set_title('')

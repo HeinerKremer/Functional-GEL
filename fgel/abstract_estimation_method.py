@@ -48,7 +48,7 @@ class AbstractEstimationMethod:
     def _to_tensor(self, data_array):
         return np_to_tensor(data_array)
 
-    def _fit_internal(self, x, z, x_dev, z_dev):
+    def _fit_internal(self, x, z, x_dev, z_dev, debugging=False):
         raise NotImplementedError()
 
     def _pretrain_theta(self, x, z, mmr=False):

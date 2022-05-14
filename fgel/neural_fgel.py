@@ -56,7 +56,7 @@ class NeuralFGEL(GeneralizedEL):
             l_reg = 0
         return moment, -moment + l_reg
 
-    def _fit_internal(self, x, z, x_val, z_val, show_plots):
+    def _fit_internal(self, x, z, x_val, z_val, debugging=False):
         n = x[0].shape[0]
         if self.batch_size is None:
             self.batch_size = n

@@ -83,7 +83,7 @@ class NeuralVMM(AbstractEstimationMethod):
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)
 
-    def _fit_internal(self, x, z, x_val, z_val, show_plots):
+    def _fit_internal(self, x, z, x_val, z_val, debugging=False):
         n = x[0].shape[0]
         batch_iter = BatchIter(n, self.batch_size)
         x_tensor = self._to_tensor(x)

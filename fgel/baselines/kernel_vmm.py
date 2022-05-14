@@ -12,7 +12,7 @@ class KernelVMM(AbstractEstimationMethod):
         self.num_iter = num_iter
         self.verbose = verbose
 
-    def _fit_internal(self, x, z, x_val, z_val, show_plots):
+    def _fit_internal(self, x, z, x_val, z_val, debugging=False):
         alpha = self.alpha
         while True:
             try:
