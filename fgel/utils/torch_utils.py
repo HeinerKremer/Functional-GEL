@@ -50,6 +50,12 @@ def np_to_tensor(data_array):
     return data_tensor
 
 
+def torch_softplus(x, sharpness=1):
+    x_s = sharpness * x
+    return ((torch.log(1 + torch.exp(-torch.abs(x_s)))
+             + torch.max(x_s, torch.zeros_like(x_s))) / sharpness)
+
+
 class Parameter(nn.Module):
     def __init__(self, shape=None, n_sample=None):
         super().__init__()
