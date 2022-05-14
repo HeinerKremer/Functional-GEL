@@ -278,21 +278,6 @@ class GeneralizedEL(AbstractEstimationMethod):
             ax.set_title('')
             plt.show()
 
-    def _pretrain_theta(self, x, z, mmr=False):
-        optimizer = torch.optim.LBFGS(self.model.parameters(),
-                                      line_search_fn="strong_wolfe")
-
-        def closure():
-            optimizer.zero_grad()
-            psi = self.model.psi(x)
-            if mmr:
-                self.set_kernel(z=z)
-                loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z, psi) / (x.shape[0] ** 2)
-            else:
-                loss = (psi ** 2).mean()
-            loss.backward()
-            return loss
-        optimizer.step(closure)
 
     """--------------------- Visualization methods ---------------------"""
     # def compute_weights(self, x, z):

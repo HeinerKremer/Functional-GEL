@@ -34,6 +34,11 @@ class Model(nn.Module):
     def initialize(self):
         nn.init.normal_(self.theta)
 
+    def is_finite(self):
+        isnan = np.sum(np.isnan(self.get_parameters()))
+        isfinite = np.sum(np.isfinite(self.get_parameters()))
+        return (not isnan) and isfinite
+
 
 class HeteroskedasticNoiseExperiment(AbstractExperiment):
     def __init__(self, theta, noise=1.0, heteroskedastic=False):

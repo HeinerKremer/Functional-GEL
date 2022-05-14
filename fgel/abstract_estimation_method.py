@@ -50,3 +50,19 @@ class AbstractEstimationMethod:
 
     def _fit_internal(self, x, z, x_dev, z_dev, show_plots):
         raise NotImplementedError()
+
+    def _pretrain_theta(self, x, z, mmr=False):
+        optimizer = torch.optim.LBFGS(self.model.parameters(),
+                                      line_search_fn="strong_wolfe")
+
+        def closure():
+            optimizer.zero_grad()
+            psi = self.model.psi(x)
+            if mmr:
+                self.set_kernel(z=z)
+                loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z, psi) / (x.shape[0] ** 2)
+            else:
+                loss = (psi ** 2).mean()
+            loss.backward()
+            return loss
+        optimizer.step(closure)

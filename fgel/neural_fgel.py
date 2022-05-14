@@ -18,21 +18,27 @@ class NeuralFGEL(GeneralizedEL):
         self.dim_z = dim_z
         self.batch_size = batch_size
         self.reg_param = reg_param
-        self.f_optimizer_args = f_optimizer_args
+        self.f_optim_args = f_optimizer_args
 
-        if f_network_kwargs is None:
-            f_network_kwargs = {
-                "input_dim": self.dim_z,
-                "layer_widths": [50, 20],
-                "activation": torch.nn.LeakyReLU,
-                "num_out": self.model.psi_dim,
-            }
-        self.f = ModularMLPModel(**f_network_kwargs)
+        self.f_network_kwargs = self.update_default_f_network_kwargs(f_network_kwargs)
+        self.f = ModularMLPModel(**self.f_network_kwargs)
         super().__init__(model=model, **kwargs)
 
     def set_optimizers(self, param_container=None):
-        self.f_optimizer = OAdam(params=self.f.parameters(), lr=self.f_optimizer_args["lr"], betas=(0.5, 0.9))
+        self.f_optimizer = OAdam(params=self.f.parameters(), lr=self.f_optim_args["lr"], betas=(0.5, 0.9))
         self.theta_optimizer = OAdam(params=self.model.parameters(), lr=self.theta_optim_args["lr"], betas=(0.5, 0.9))
+
+    def update_default_f_network_kwargs(self, f_network_kwargs):
+        f_network_kwargs_default = {
+            "input_dim": self.dim_z,
+            "layer_widths": [50, 20],
+            "activation": torch.nn.LeakyReLU,
+            "num_out": self.model.psi_dim,
+        }
+        if f_network_kwargs is not None:
+            for key, value in f_network_kwargs.items():
+                f_network_kwargs_default[key] = value
+        return f_network_kwargs_default
 
     def init_training(self, x_tensor, z_tensor, z_val_tensor=None):
         self.set_kernel(z_tensor, z_val_tensor)
@@ -113,4 +119,3 @@ if __name__ == '__main__':
     results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=10,
                                          estimatortype=NeuralFGEL, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])
-    
