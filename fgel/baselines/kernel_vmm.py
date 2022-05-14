@@ -51,7 +51,7 @@ class KernelVMM(AbstractEstimationMethod):
             optimizer.step(closure)
 
             if self.verbose and x_val is not None:
-                val_mmr_loss = self._calc_val_mmr(x_val, z_val)
+                val_mmr_loss = self.calc_val_mmr(x_val, z_val)
                 print("iter %d, validation MMR: %e" % (iter_i, val_mmr_loss))
 
     def _calc_m_matrix(self, x_tensor, alpha):

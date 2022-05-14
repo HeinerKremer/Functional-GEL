@@ -257,7 +257,7 @@ class GeneralizedEL(AbstractEstimationMethod):
 
             if epoch_i % self.eval_freq == 0:
                 cycle_num += 1
-                val_mmr_loss = self._calc_val_mmr(x_val, z_val)
+                val_mmr_loss = self.calc_val_mmr(x_val, z_val)
                 if self.verbose:
                     val_obj = self.objective(x_val, z_val)
                     print("epoch %d, val-obj=%f, mmr-loss=%f"

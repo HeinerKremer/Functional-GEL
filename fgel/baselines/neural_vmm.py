@@ -122,7 +122,7 @@ class NeuralVMM(AbstractEstimationMethod):
 
                 if epoch_i % eval_freq_epochs == 0:
                     cycle_num += 1
-                    val_mmr_loss = self._calc_val_mmr(x_val, z_val)
+                    val_mmr_loss = self.calc_val_mmr(x_val, z_val)
                     if self.verbose:
                         val_theta_obj, _ = self._game_objective(x_val_tensor, z_val_tensor)
                         print("epoch %d, theta-obj=%f, val-mmr-loss=%f"

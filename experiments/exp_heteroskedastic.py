@@ -48,7 +48,7 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         self.heteroskedastic = heteroskedastic
         super().__init__(self, theta_dim=self.dim_theta, z_dim=self.dim_theta)
 
-    def get_model(self):
+    def init_model(self):
         return Model(dim_theta=self.dim_theta)
 
     def generate_data(self, num_data):
@@ -89,7 +89,7 @@ def run_heteroskedastic_n_times(theta, noise, n_train, repititions, estimatortyp
     np.random.seed(12345)
     for i in range(repititions):
         exp.setup_data(n_train=n_train, n_val=n_train, n_test=20000)
-        model = exp.get_model()
+        model = exp.init_model()
         estimator = estimatortype(model=model, **estimatorkwargs)
         estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
         train_risks.append(exp.eval_test_risk(model, exp.x_train))

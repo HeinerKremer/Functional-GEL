@@ -34,7 +34,7 @@ class AbstractEstimationMethod:
         if z_val is not None:
             self.kernel_z_val = get_rbf_kernel(z_val, z_val, **self.kernel_args)
 
-    def _calc_val_mmr(self, x_val, z_val):
+    def calc_val_mmr(self, x_val, z_val):
         if not isinstance(x_val, torch.Tensor):
             x_val = self._to_tensor(x_val)
         if not isinstance(z_val, torch.Tensor):

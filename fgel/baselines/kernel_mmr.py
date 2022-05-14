@@ -28,7 +28,7 @@ class KernelMMR(AbstractEstimationMethod):
         optimizer.step(closure)
 
         if self.verbose and x_val is not None:
-            val_mmr = self._calc_val_mmr(x_val, z_val)
+            val_mmr = self.calc_val_mmr(x_val, z_val)
             print("Validation MMR loss: %e" % val_mmr)
 
 
