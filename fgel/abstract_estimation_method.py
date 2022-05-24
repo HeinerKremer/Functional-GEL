@@ -18,8 +18,8 @@ class AbstractEstimationMethod:
         self.k_cholesky = None
         self.kernel_z_val = None
 
-    def fit(self, x, z, x_dev, z_dev):
-        self._fit_internal(x, z, x_dev, z_dev)
+    def fit(self, x, z, x_dev, z_dev, debugging=False):
+        self._fit_internal(x, z, x_dev, z_dev, debugging=debugging)
         self.is_fit = True
 
     def get_trained_parameters(self):

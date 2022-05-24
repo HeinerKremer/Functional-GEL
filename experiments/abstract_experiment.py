@@ -1,6 +1,4 @@
 
-
-
 class AbstractExperiment:
     def __init__(self, psi_dim, theta_dim, z_dim):
         self.psi_dim = psi_dim
@@ -17,6 +15,9 @@ class AbstractExperiment:
         self.x_train, self.z_train = self.generate_data(n_train)
         self.x_val, self.z_val = self.generate_data(n_val)
         self.x_test, self.z_test = self.generate_data(n_test)
+
+    def init_model(self):
+        raise NotImplementedError
 
     def get_true_parameters(self):
         raise NotImplementedError

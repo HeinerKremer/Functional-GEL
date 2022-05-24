@@ -1,3 +1,7 @@
+import argparse
+import json
+import os
+
 import numpy as np
 import torch
 
@@ -10,7 +14,7 @@ def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_k
     """
     if estimator_kwargs is None:
         estimator_kwargs = {}
-    if hyperparams is None:
+    if hyperparams is None or hyperparams == {}:
         hyperparams = {None: [None]}
     hypervals = list(hyperparams.values())[0]
     hyperparam = list(hyperparams.keys())[0]
@@ -42,11 +46,11 @@ def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_k
         test_risks.append(float(exp.eval_test_risk(model, exp.x_test)))
         mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
         val_mmr.append(float(estimator.calc_val_mmr(exp.x_val, exp.z_val).detach().numpy()))
-    if validation_metric == 'mmr':
+    if validation_metric == 'mmr' and len(models) > 1:
         val_mmr = np.nan_to_num(val_mmr, nan=np.inf)
         i = np.argmin(val_mmr)
     else:
-        raise NotImplementedError
+        i = 0
     stats = {'hyperparam': hypervals[i],
              'param': params[i],
              'train_risk': train_risks[i],
@@ -56,7 +60,11 @@ def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_k
     return models[i], stats
 
 
-def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, estimator_kwargs, hyperparams, repititions, seed0=12345):
+def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, estimator_kwargs, hyperparams,
+                            repititions, seed0=12345, filename=None):
+    """
+    Runs the same experiment `repititions` times and computes statistics.
+    """
     hypervals = []
     train_risk = []
     test_risk = []
@@ -82,27 +90,70 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
                 "max_risk": np.max(test_risk),
                 "mean_mmr_loss": np.mean(val_mmr),
                 "std_mmr_loss": np.std(val_mmr),
-               "hyperparam_values": hypervals,
+                "n_runs": repititions,
+                "hyperparam_values": hypervals,
+                "train_risks": train_risk,
+               
                }
+
+    if filename is not None:
+        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={str(estimator_class.__name__)}_n={n_train}"
+        os.makedirs(os.path.dirname(prefix), exist_ok=True)
+        with open(prefix + filename + ".json", "w") as fp:
+            json.dump(results, fp)
     return results
 
 
+def run_all(experiment, repititions, method=None):
+    """
+    Runs all methods for all sample sizes `n_train_list` sequentially `repititions` times. This can be used if one has
+    only access to a single machine instead of a computer cluster. Might take a long time to finish.
+    """
+    from exp_config import methods, experiments
+
+    exp_info = experiments[experiment]
+
+    if method is not None:
+        methods = {method: methods[method]}
+
+    for n_train in exp_info['n_train']:
+        for method, estimator_info in methods.items():
+            print(f'Running {method} with n_train={n_train}.')
+            run_experiment_repeated(experiment=exp_info['exp_class'],
+                                    exp_params=exp_info['exp_params'],
+                                    n_train=n_train,
+                                    estimator_class=estimator_info['estimator_class'],
+                                    estimator_kwargs=estimator_info['estimator_kwargs'],
+                                    hyperparams=estimator_info['hyperparams'],
+                                    repititions=repititions,
+                                    filename='')
+
+
 if __name__ == "__main__":
-    from fgel.baselines.least_squares import OrdinaryLeastSquares
-    from fgel.kernel_fgel import KernelFGEL
-    from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
+    from exp_config import methods, experiments
 
-    exp_params = {'theta': [1.7], 'noise': 1.0}
-    estimator_kwargs = dict(max_num_epochs=100, eval_freq=50,
-                            divergence='kl', outeropt='lbfgs', inneropt='lbfgs', inneriters=100)
-    hyperparams = {'reg_param': [1e-1, 1e-3, 1e-6, 1e-9]}
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run_all', action='store_true')
+    parser.add_argument('--experiment', type=str, default='heteroskedastic')
+    parser.add_argument('--n_train', type=int, default=100)
+    parser.add_argument('--method', type=str, default='OrdinaryLeastSquares')
+    parser.add_argument('--rollouts', type=int, default=1)
+    parser.add_argument('--filename', type=str, default='')
 
-    results = run_experiment_repeated(experiment=HeteroskedasticNoiseExperiment,
-                            exp_params=exp_params,
-                            n_train=200,
-                            estimator_class=KernelFGEL,
-                            estimator_kwargs=estimator_kwargs,
-                            hyperparams=hyperparams,
-                            repititions=5)
+    args = parser.parse_args()
 
-    print(results)
+    estimator_info = methods[args.method]
+    exp_info = experiments[args.experiment]
+
+    if args.run_all:
+        run_all(args.experiment, args.rollouts, args.method)
+    else:
+        results = run_experiment_repeated(experiment=exp_info['exp_class'],
+                                          exp_params=exp_info['exp_params'],
+                                          n_train=args.n_train,
+                                          estimator_class=estimator_info['estimator_class'],
+                                          estimator_kwargs=estimator_info['estimator_kwargs'],
+                                          hyperparams=estimator_info['hyperparams'],
+                                          repititions=args.rollouts,
+                                          filename=args.filename)
+        print(results)

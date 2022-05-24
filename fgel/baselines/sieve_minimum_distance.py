@@ -11,9 +11,9 @@ from fgel.utils.torch_utils import torch_softplus, BatchIter
 
 class SMDIdentity(AbstractEstimationMethod):
     # Implements SMD algorithm using LBFGS optimizer and identity omega
-    def __init__(self, model, dim_z, num_knots=5, polyn_degree=2):
+    def __init__(self, model, num_knots=5, polyn_degree=2):
         AbstractEstimationMethod.__init__(self, model)
-        self.basis = MultiOutputPolynomialSplineBasis(z_dim=dim_z, num_out=self.psi_dim,
+        self.basis = MultiOutputPolynomialSplineBasis(z_dim=self.model.dim_z, num_out=self.psi_dim,
                                                       num_knots=num_knots, degree=polyn_degree)
 
     def _fit_internal(self, x, z, x_val, z_val):
@@ -62,9 +62,9 @@ class SMDIdentity(AbstractEstimationMethod):
         
 
 class SMDHomoskedastic(SMDIdentity):
-    def __init__(self, model, dim_z, num_knots=5, polyn_degree=2, num_iter=2):
+    def __init__(self, model, num_knots=5, polyn_degree=2, num_iter=2):
         self.num_iter = num_iter
-        SMDIdentity.__init__(self, model=model, dim_z=dim_z,
+        SMDIdentity.__init__(self, model=model,
                              num_knots=num_knots, polyn_degree=polyn_degree)
 
     def _fit_internal(self, x, z, x_val, z_val):
@@ -109,11 +109,11 @@ class FlexibleVarNetwork(nn.Module):
 
 
 class SMDHeteroskedastic(SMDIdentity):
-    def __init__(self, model, dim_z, num_knots=5, polyn_degree=2, num_iter=2):
+    def __init__(self, model, num_knots=5, polyn_degree=2, num_iter=2):
         self.num_iter = num_iter
-        self.var_network = FlexibleVarNetwork(dim_z, model.psi_dim)
+        self.var_network = FlexibleVarNetwork(model.dim_z, model.psi_dim)
 
-        SMDIdentity.__init__(self, model=model, dim_z=dim_z,
+        SMDIdentity.__init__(self, model=model,
                              num_knots=num_knots, polyn_degree=polyn_degree)
 
     def _fit_internal(self, x, z, x_val, z_val):

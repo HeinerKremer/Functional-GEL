@@ -15,8 +15,8 @@ cvx_solver = cvx.MOSEK
 class GeneralizedEL(AbstractEstimationMethod):
 
     def __init__(self, model,
-                 max_num_epochs, eval_freq, max_no_improve=5, burn_in_cycles=5, pretrain=False, theta_optim_args=None,
-                 divergence=None, outeropt=None, inneropt=None, inneriters=None, kernel_args=None,
+                 max_num_epochs=1000, eval_freq=500, max_no_improve=5, burn_in_cycles=5, pretrain=False, theta_optim_args=None,
+                 divergence=None, outeropt='lbfgs', inneropt='lbfgs', inneriters=None, kernel_args=None,
                  verbose=False):
         AbstractEstimationMethod.__init__(self, model, kernel_args)
 

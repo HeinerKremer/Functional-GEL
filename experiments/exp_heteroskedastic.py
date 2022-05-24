@@ -14,11 +14,12 @@ def eval_model(t, theta, numpy=False):
         return np.sum(t * theta.reshape(1, -1), axis=1, keepdims=True) ** 1
 
 
-class Model(nn.Module):
+class LinearModel(nn.Module):
     def __init__(self, dim_theta):
         nn.Module.__init__(self)
         self.theta = nn.Parameter(torch.FloatTensor([[0.5] * dim_theta]))
         self.psi_dim = 1
+        self.dim_z = 1
 
     def forward(self, t):
         return eval_model(t, torch.reshape(self.theta, [1, -1]))
@@ -49,7 +50,7 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         super().__init__(self, theta_dim=self.dim_theta, z_dim=self.dim_theta)
 
     def init_model(self):
-        return Model(dim_theta=self.dim_theta)
+        return LinearModel(dim_theta=self.dim_theta)
 
     def generate_data(self, num_data):
         if num_data is None:

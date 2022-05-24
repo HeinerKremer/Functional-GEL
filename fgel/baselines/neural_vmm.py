@@ -10,7 +10,7 @@ from fgel.utils.torch_utils import ModularMLPModel, BatchIter
 
 
 class NeuralVMM(AbstractEstimationMethod):
-    def __init__(self, model, dim_z, l2_lambda=1e-6, kernel_lambda=0, kernel_args=None,
+    def __init__(self, model, l2_lambda=1e-6, kernel_lambda=0, kernel_args=None,
                  batch_size=200, max_num_epochs=5000, eval_freq=500, max_no_improve=5, burn_in_cycles=5,
                  f_network_kwargs=None , f_optimizer_args=None, theta_optimizer_args=None, pretrain=True,
                  verbose=False):
@@ -21,7 +21,7 @@ class NeuralVMM(AbstractEstimationMethod):
             theta_optimizer_args = {"lr": 5e-4}
 
         self.model = model
-        self.dim_z = dim_z
+        self.dim_z = model.dim_z
         self.kernel_lambda = kernel_lambda
         self.l2_lambda = l2_lambda
         self.f_optim_args = f_optimizer_args

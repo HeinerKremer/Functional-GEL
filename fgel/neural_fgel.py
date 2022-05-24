@@ -3,11 +3,13 @@ import time
 import torch
 from fgel.generalized_el import GeneralizedEL
 from fgel.utils.oadam import OAdam
-from utils.torch_utils import BatchIter, ModularMLPModel
+from fgel.utils.torch_utils import BatchIter, ModularMLPModel
+
+import matplotlib.pyplot as plt
 
 
 class NeuralFGEL(GeneralizedEL):
-    def __init__(self, model, dim_z, reg_param=1e-6,
+    def __init__(self, model, reg_param=1e-6,
                  batch_size=None, f_network_kwargs=None, f_optimizer_args=None,
                  **kwargs):
 
@@ -15,7 +17,7 @@ class NeuralFGEL(GeneralizedEL):
             f_optimizer_args = {'lr': 1e-3}
 
         self.model = model
-        self.dim_z = dim_z
+        self.dim_z = self.model.dim_z
         self.batch_size = batch_size
         self.reg_param = reg_param
         self.f_optim_args = f_optimizer_args
@@ -46,12 +48,12 @@ class NeuralFGEL(GeneralizedEL):
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)
 
-    def _game_objective(self, x, z):
+    def objective(self, x, z, *args):
         fz = self.f(z)
         f_psi = torch.einsum('ik, ik -> i', fz, self.model.psi(x))
         moment = torch.mean(self.gel_function(f_psi))
         if self.reg_param > 0:
-            l_reg = self.reg_param / 2 * torch.mean(fz ** 2)
+            l_reg = self.reg_param * torch.mean(fz ** 2)
         else:
             l_reg = 0
         return moment, -moment + l_reg
@@ -70,6 +72,7 @@ class NeuralFGEL(GeneralizedEL):
         eval_freq_epochs = math.ceil(self.eval_freq / batches_per_epoch)
 
         self.init_training(x_tensor, z_tensor)
+        loss = []
 
         min_val_loss = float("inf")
         time_0 = time.time()
@@ -82,7 +85,8 @@ class NeuralFGEL(GeneralizedEL):
             for batch_idx in batch_iter:
                 x_batch = [x_tensor[0][batch_idx], x_tensor[1][batch_idx]]
                 z_batch = z_tensor[batch_idx]
-                theta_obj, f_obj = self._game_objective(x_batch, z_batch)
+                theta_obj, f_obj = self.objective(x_batch, z_batch)
+                loss.append(float(theta_obj.detach().numpy()))
 
                 # update rho network
                 self.theta_optimizer.zero_grad()
@@ -98,7 +102,7 @@ class NeuralFGEL(GeneralizedEL):
                 cycle_num += 1
                 val_mmr_loss = self.calc_val_mmr(x_val, z_val)
                 if self.verbose:
-                    val_theta_obj, _ = self._game_objective(x_val_tensor, z_val_tensor)
+                    val_theta_obj, _ = self.objective(x_val_tensor, z_val_tensor)
                     print("epoch %d, theta-obj=%f, val-mmr-loss=%f"
                           % (epoch_i, val_theta_obj, val_mmr_loss))
                 if val_mmr_loss < min_val_loss:
@@ -110,6 +114,9 @@ class NeuralFGEL(GeneralizedEL):
                     break
         if self.verbose:
             print("time taken:", time.time() - time_0)
+        if debugging:
+            plt.plot(loss[1:])
+            plt.show()
 
 
 if __name__ == '__main__':

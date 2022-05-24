@@ -1,3 +1,5 @@
+import json
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -11,14 +13,14 @@ NEURIPS_LINE_WIDTH = 5.5  # Text width: 5.5in (double figure minus spacing 0.2in
 FIG_SIZE_NEURIPS_DOUBLE = (NEURIPS_LINE_WIDTH / 2, NEURIPS_LINE_WIDTH / 2 * 4/6)
 figsize = (LINE_WIDTH*1.4, LINE_WIDTH/2)
 
-labels = {'MinimumDiscrepancy': 'CMD',
+labels = {'SMDIdentity': 'SMD',
           'SMDHeteroskedastic': 'SMD',
           'KernelFGEL': 'K-FGEL',
           'NeuralFGEL': 'NN-FGEL',
           'KernelMMR': 'MMR',
-          'NonCausalBaseline': 'LSQ',
-          'SingleKernelVMM': 'K-VMM',
-          'DoubleNeuralVMM': 'NN-VMM'}
+          'OrdinaryLeastSquares': 'LSQ',
+          'KernelVMM': 'K-VMM',
+          'NeuralVMM': 'NN-VMM'}
 
 
 NEURIPS_RCPARAMS = {
@@ -76,55 +78,35 @@ NEURIPS_RCPARAMS = {
 }
 
 
-def plot_results_over_sample_size(agg_data, models, n_samples, n_runs=1, quantity='mse', plot_both=True, logscale=False, divergence=None):
-    colors = ['pink', 'green', 'blue', 'black', 'red', 'purple', 'g', '2', 'kk', 'gray']
-    # labels = {key: key for key in models}
+def plot_results_over_sample_size(methods, n_samples, quantity='square_error', logscale=False, divergence=None):
+    plt.rcParams.update(NEURIPS_RCPARAMS)
+    sns.set_theme()
+
     marker = ['v', 'o', 's', 'd', 'p', '*', 'h']
     colors = ['tab:blue', 'tab:red', 'tab:orange', 'tab:olive', 'tab:pink', 'tab:cyan', 'tab:purple']
 
-
-    mses = {model: {'mean': [], 'std': []} for model in models}
-    risks = {model: {'mean': [], 'std': []} for model in models}
-    median_risks = {model: {'mean': [], 'std': []} for model in models}
-
+    results = {method: {'mean': [], 'std': []} for method in methods}
     n_samples = np.sort(n_samples)
-    for n_sample in n_samples:
-        for model in models:
-            print(n_sample, model)
-            best_config, hyperparams = pick_best_config(agg_data, model, n_sample, divergence=divergence)
-            mses[model]['mean'].append(best_config['mean_square_error'])
-            mses[model]['std'].append(best_config['std_square_error'] / np.sqrt(n_runs))
-            risks[model]['mean'].append(best_config['mean_risk'])
-            risks[model]['std'].append(best_config['std_risk'] / np.sqrt(n_runs))
-            median_risks[model]['mean'].append(best_config['median_risk'])
-            median_risks[model]['std'].append(0)
+    for n_train in n_samples:
+        for method in methods:
+            filename = f"experiments/results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}_n={n_train}.json"
+            with open(filename, "r") as fp:
+                res = json.load(fp)
+            results[method]['mean'].append(res['mean_'+quantity])
+            results[method]['std'].append(res['std_'+quantity] / np.sqrt(res['n_runs']))
 
-    if quantity == 'mse':
-        error = mses
-    elif quantity == 'risk':
-        error = risks
-    elif quantity == 'median_risk':
-        error = median_risks
-    else:
-        raise NotImplementedError
-
-    if plot_both:
-        n_plots = 2
-        figsize = (LINE_WIDTH*0.8, LINE_WIDTH)
-    else:
-        n_plots = 1
-        figsize = (LINE_WIDTH, LINE_WIDTH / 2)
-        figsize = (LINE_WIDTH/1.3, LINE_WIDTH / 1.8)
+    n_plots = 1
+    # figsize = (LINE_WIDTH, LINE_WIDTH / 2)
+    figsize = (LINE_WIDTH/1.3, LINE_WIDTH / 1.8)
 
     fig, ax = plt.subplots(1, n_plots, figsize=figsize)
+    ax = [ax]
 
-    if not plot_both:
-        ax = [ax]
-    for i, (key, val) in enumerate(error.items()):
-        ax[0].plot(n_samples, val['mean'], label=labels[key], color=colors[i], marker=marker[i], ms=10)
+    for i, (method, res) in enumerate(results.items()):
+        ax[0].plot(n_samples, res['mean'], label=labels[method], color=colors[i], marker=marker[i], ms=10)
         ax[0].fill_between(n_samples,
-                        np.subtract(val['mean'], val['std']),
-                        np.add(val['mean'], val['std']),
+                        np.subtract(res['mean'], res['std']),
+                        np.add(res['mean'], res['std']),
                         alpha=0.2,
                         color=colors[i])
 
@@ -133,25 +115,17 @@ def plot_results_over_sample_size(agg_data, models, n_samples, n_runs=1, quantit
     if logscale:
         ax[0].set_xscale('log')
         ax[0].set_yscale('log')
-    ax[0].set_xlim([1e2, 1e4])
+    #ax[0].set_xlim([1e2, 1e4])
     ax[0].set_ylim([1e-4, 1e0])
-
-    if plot_both:
-        for i, (key, val) in enumerate(risks.items()):
-            ax[1].plot(n_samples, val['mean'], label=labels[key], color=colors[i])
-            ax[1].fill_between(n_samples,
-                            np.subtract(val['mean'], val['std']),
-                            np.add(val['mean'], val['std']),
-                            alpha=0.2,
-                            color=colors[i])
-
-        ax[1].set_xlabel('sample size')
-        ax[1].set_ylabel('test risk')
-        if logscale:
-            ax[1].set_xscale('log')
-            ax[1].set_yscale('log')
 
     plt.legend()
     plt.tight_layout()
     plt.savefig('method_comparison.pdf', dpi=200)
     plt.show()
+
+
+if __name__ == "__main__":
+    plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic'],# 'KernelFGEL', 'KernelVMM'],
+                                  n_samples=[64, 128, 256, 512, 1024, 2048, 5096],#[50, 100, 200, 500, 1000, 2000],
+                                  quantity='square_error',
+                                  logscale=True,)
