@@ -9,7 +9,7 @@ class KernelMMR(AbstractEstimationMethod):
         AbstractEstimationMethod.__init__(self, model, kernel_args)
         self.verbose = verbose
 
-    def _fit_internal(self, x, z, x_val, z_val, debugging=False):
+    def _train_internal(self, x, z, x_val, z_val, debugging=False):
         x_tensor = self._to_tensor(x)
         z_tensor = self._to_tensor(z)
         n_sample = z_tensor.shape[0]

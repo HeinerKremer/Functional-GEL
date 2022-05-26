@@ -15,13 +15,13 @@ cvx_solver = cvx.MOSEK
 class GeneralizedEL(AbstractEstimationMethod):
 
     def __init__(self, model,
-                 max_num_epochs=1000, eval_freq=500, max_no_improve=5, burn_in_cycles=5, pretrain=False, theta_optim_args=None,
+                 max_num_epochs=5000, eval_freq=500, max_no_improve=5, burn_in_cycles=5, pretrain=True, theta_optim_args=None,
                  divergence=None, outeropt='lbfgs', inneropt='lbfgs', inneriters=None, kernel_args=None,
                  verbose=False):
-        AbstractEstimationMethod.__init__(self, model, kernel_args)
+        AbstractEstimationMethod.__init__(self, model=model, kernel_args=kernel_args)
 
         if theta_optim_args is None:
-            theta_optim_args = {'lr': 5e-2}
+            theta_optim_args = {"lr": 5e-4}
 
         self.divergence_type = divergence
         self.softplus = torch.nn.Softplus(beta=10)
@@ -75,6 +75,8 @@ class GeneralizedEL(AbstractEstimationMethod):
                     return np.sum(weights * np.log(n_sample * weights))
                 else:
                     return torch.sum(weights * torch.log(n_sample * weights))
+        elif self.divergence_type == 'off':
+            return None
         else:
             raise NotImplementedError()
         return divergence
@@ -99,6 +101,8 @@ class GeneralizedEL(AbstractEstimationMethod):
                     return - torch.exp(x)
                 else:
                     return - cvx.exp(x)
+        elif self.divergence_type == 'off':
+            return None
         else:
             raise NotImplementedError
         return divergence
@@ -119,7 +123,6 @@ class GeneralizedEL(AbstractEstimationMethod):
             self.alpha_optimizer = None
         else:
             self.alpha_optimizer = None
-            # raise NotImplementedError
 
         # Outer optimization settings (theta)
         if self.outeropt == 'adam':
@@ -135,7 +138,6 @@ class GeneralizedEL(AbstractEstimationMethod):
             self.optimize_step = self.lbfgs_step
         else:
             self.alpha_optimizer = None
-            # raise NotImplementedError
 
     """------------- Methods for standard finite dimensional GEL to be overridden for FGEL ------------"""
     def compute_alpha_psi(self, x, z):
@@ -143,31 +145,32 @@ class GeneralizedEL(AbstractEstimationMethod):
 
     def objective(self, x, z, *args, **kwargs):
         objective = torch.mean(self.gel_function(self.compute_alpha_psi(x, z)))
-        return objective
+        return objective, -objective
 
     """--------------------- Optimization methods for theta ---------------------"""
     def gradient_step(self, x_tensor, z_tensor, inneriters=100):
         self.optimize_alpha(x_tensor, z_tensor, iters=inneriters)
         self.theta_optimizer.zero_grad()
-        obj = self.objective(x_tensor, z_tensor)
+        obj, _ = self.objective(x_tensor, z_tensor)
         obj.backward()
         self.theta_optimizer.step()
         return obj
 
     def lbfgs_step(self, x_tensor, z_tensor):
         losses = []
+
         def closure():
             self.optimize_alpha(x_tensor, z_tensor)
             if torch.is_grad_enabled():
                 self.theta_optimizer.zero_grad()
-            obj = self.objective(x_tensor, z_tensor)
+            obj, _ = self.objective(x_tensor, z_tensor)
             losses.append(obj.detach().numpy())
             if obj.requires_grad:
                 obj.backward()
             return obj
 
         self.theta_optimizer.step(closure)
-        return 0
+        return losses
 
     """--------------------- Optimization methods for alpha ---------------------"""
     def optimize_alpha(self, x_tensor, z_tensor, iters=5000):
@@ -204,10 +207,11 @@ class GeneralizedEL(AbstractEstimationMethod):
         def closure():
             if torch.is_grad_enabled():
                 self.alpha_optimizer.zero_grad()
-            loss = - self.objective(x_tensor, z_tensor)
-            if loss.requires_grad:
-                loss.backward()
-            return loss
+            # loss = - self.objective(x_tensor, z_tensor)
+            _, loss_alpha = self.objective(x_tensor, z_tensor)
+            if loss_alpha.requires_grad:
+                loss_alpha.backward()
+            return loss_alpha
 
         self.alpha_optimizer.step(closure)
         if np.isnan(np.linalg.norm(self.alpha.params.detach().numpy())):
@@ -218,15 +222,15 @@ class GeneralizedEL(AbstractEstimationMethod):
     def optimize_alpha_adam(self, x_tensor, z_tensor, iters):
         for i in range(iters):
             self.alpha_optimizer.zero_grad()
-            obj = - self.objective(x_tensor, z_tensor)
-            obj.backward()
+            _, loss_alpha = self.objective(x_tensor, z_tensor)
+            loss_alpha.backward()
             self.alpha_optimizer.step()
             if self.divergence_type == 'log':
                 with torch.no_grad():
                     alpha_k_psi = self.compute_alpha_psi(x_tensor, z_tensor)
                     alpha, _ = self.alpha.project_log_input_constraint(alpha_k_psi)
                     self.alpha.update_params(alpha)
-            return
+            return loss_alpha
 
     def init_training(self, x_tensor, z_tensor, z_val_tensor=None):
         self.alpha.init_params()
@@ -234,9 +238,9 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)
 
-    def _fit_internal(self, x, z, x_val, z_val, debugging=False):
-        x_tensor = self._to_tensor(x)
-        z_tensor = self._to_tensor(z)
+    def _train_internal(self, x_train, z_train, x_val, z_val, debugging=True):
+        x_tensor = self._to_tensor(x_train)
+        z_tensor = self._to_tensor(z_train)
 
         self.init_training(x_tensor, z_tensor)
 
@@ -259,7 +263,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                 cycle_num += 1
                 val_mmr_loss = self.calc_val_mmr(x_val, z_val)
                 if self.verbose:
-                    val_obj = self.objective(x_val, z_val)
+                    val_obj, _ = self.objective(x_val, z_val)
                     print("epoch %d, val-obj=%f, mmr-loss=%f"
                           % (epoch_i, val_obj, val_mmr_loss))
                 if val_mmr_loss < min_val_loss:
@@ -354,6 +358,7 @@ class GeneralizedEL(AbstractEstimationMethod):
     #         ax.imshow(profile_divergence, aspect='auto', extent=([theta_range1[0], theta_range1[1], theta_range2[0], theta_range2[1]]))
     #         plt.show()
     #     return profile_divergence
+
 
 if __name__ == '__main__':
     from experiments.exp_heteroskedastic import run_heteroskedastic_n_times

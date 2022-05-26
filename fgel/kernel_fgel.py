@@ -38,7 +38,8 @@ class KernelFGEL(GeneralizedEL):
         self.set_kernel(z)
         alpha_k_psi = self.compute_alpha_psi(x, z)
         objective = torch.mean(self.gel_function(alpha_k_psi)) - self.reg_param/2 * self.get_rkhs_norm()
-        return objective
+        # return objective
+        return torch.mean(self.gel_function(alpha_k_psi)), torch.mean(self.gel_function(alpha_k_psi)) - self.reg_param/2 * self.get_rkhs_norm()
 
     def optimize_alpha_cvxpy(self, x_tensor, z_tensor):
         """CVXPY alpha optimization for kernelized objective"""
@@ -73,6 +74,6 @@ if __name__ == '__main__':
 
     estimatorkwargs = dict(theta_optim_args={}, max_num_epochs=100, eval_freq=50,
                            divergence='chi2', outeropt='lbfgs', inneropt='lbfgs', inneriters=100)
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=20,
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=100, repititions=5,
                                          estimatortype=KernelFGEL, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])

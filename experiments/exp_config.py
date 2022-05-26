@@ -16,7 +16,7 @@ experiments = {
             'exp_params': {'theta': [2.4],
                            'noise': 1.0,
                            'heteroskedastic': True,},
-            'n_train': [64, 128, 256, 512, 1024, 2048, 5096],
+            'n_train': [64, 128, 256, 512, 1024, ]#,2048, 5096],
         }
 }
 
@@ -52,8 +52,13 @@ methods = {
     'NeuralVMM':
         {
             'estimator_class': NeuralVMM,
-            'estimator_kwargs': {},
-            'hyperparams': {}
+            'estimator_kwargs': {"batch_size": 200,
+                                 "max_num_epochs": 50000,
+                                 "burn_in_cycles": 5,
+                                 "eval_freq": 2000,
+                                 "max_no_improve": 3,
+                                 },
+            'hyperparams': {"lambda": [0, 1e-4, 1e-2, 1e0]}
         },
 
     'KernelFGEL':

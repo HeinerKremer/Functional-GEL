@@ -9,18 +9,18 @@ import matplotlib.pyplot as plt
 
 
 class NeuralFGEL(GeneralizedEL):
-    def __init__(self, model, reg_param=1e-6,
-                 batch_size=None, f_network_kwargs=None, f_optimizer_args=None,
+    def __init__(self, model, l2_lambda=1e-6,
+                 batch_size=200, f_network_kwargs=None, f_optim_args=None,
                  **kwargs):
 
-        if f_optimizer_args is None:
-            f_optimizer_args = {'lr': 1e-3}
+        if f_optim_args is None:
+            f_optim_args = {"lr": 5 * 5e-4}
 
         self.model = model
         self.dim_z = self.model.dim_z
         self.batch_size = batch_size
-        self.reg_param = reg_param
-        self.f_optim_args = f_optimizer_args
+        self.l2_lambda = l2_lambda
+        self.f_optim_args = f_optim_args
 
         self.f_network_kwargs = self.update_default_f_network_kwargs(f_network_kwargs)
         self.f = ModularMLPModel(**self.f_network_kwargs)
@@ -52,19 +52,33 @@ class NeuralFGEL(GeneralizedEL):
         fz = self.f(z)
         f_psi = torch.einsum('ik, ik -> i', fz, self.model.psi(x))
         moment = torch.mean(self.gel_function(f_psi))
-        if self.reg_param > 0:
-            l_reg = self.reg_param * torch.mean(fz ** 2)
+        if self.l2_lambda > 0:
+            l_reg = self.l2_lambda * torch.mean(fz ** 2)
         else:
             l_reg = 0
         return moment, -moment + l_reg
 
-    def _fit_internal(self, x, z, x_val, z_val, debugging=False):
-        n = x[0].shape[0]
+    def gradient_descent_ascent_step(self, x_batch, z_batch):
+        theta_obj, f_obj = self.objective(x_batch, z_batch)
+
+        # update theta
+        self.theta_optimizer.zero_grad()
+        theta_obj.backward(retain_graph=True)
+        self.theta_optimizer.step()
+
+        # update f network
+        self.f_optimizer.zero_grad()
+        f_obj.backward()
+        self.f_optimizer.step()
+        return float(theta_obj.detach().numpy())
+
+    def _train_internal(self, x_train, z_train, x_val, z_val, debugging=False):
+        n = x_train[0].shape[0]
         if self.batch_size is None:
             self.batch_size = n
         batch_iter = BatchIter(n, self.batch_size)
-        x_tensor = self._to_tensor(x)
-        z_tensor = self._to_tensor(z)
+        x_tensor = self._to_tensor(x_train)
+        z_tensor = self._to_tensor(z_train)
         x_val_tensor = self._to_tensor(x_val)
         z_val_tensor = self._to_tensor(z_val)
 
@@ -85,18 +99,9 @@ class NeuralFGEL(GeneralizedEL):
             for batch_idx in batch_iter:
                 x_batch = [x_tensor[0][batch_idx], x_tensor[1][batch_idx]]
                 z_batch = z_tensor[batch_idx]
-                theta_obj, f_obj = self.objective(x_batch, z_batch)
-                loss.append(float(theta_obj.detach().numpy()))
 
-                # update rho network
-                self.theta_optimizer.zero_grad()
-                theta_obj.backward(retain_graph=True)
-                self.theta_optimizer.step()
-
-                # update f network
-                self.f_optimizer.zero_grad()
-                f_obj.backward()
-                self.f_optimizer.step()
+                obj = self.gradient_descent_ascent_step(x_batch, z_batch)
+                loss.append(obj)
 
             if epoch_i % eval_freq_epochs == 0:
                 cycle_num += 1
@@ -122,7 +127,7 @@ class NeuralFGEL(GeneralizedEL):
 if __name__ == '__main__':
     from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    estimatorkwargs = dict(dim_z=1, max_num_epochs=5000, eval_freq=50, divergence='chi2')
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=10,
+    estimatorkwargs = dict(max_num_epochs=5000, eval_freq=50, divergence='kl')
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=2000, repititions=10,
                                          estimatortype=NeuralFGEL, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])

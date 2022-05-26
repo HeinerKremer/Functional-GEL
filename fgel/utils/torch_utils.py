@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import itertools
-import random
 
 
 class BatchIter(object):
@@ -18,7 +17,7 @@ class BatchIter(object):
 
     def __next__(self):
         if self.batch_i == 0:
-            random.shuffle(self.indices)
+            np.random.shuffle(self.indices)
             self.batch_cycle = itertools.cycle(self.indices)
         elif self.batch_i == self.num_batches:
             self.batch_i = 0

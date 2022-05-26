@@ -79,6 +79,9 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
 
 
 def run_heteroskedastic_n_times(theta, noise, n_train, repititions, estimatortype, estimatorkwargs=None):
+    np.random.seed(12345)
+    torch.random.manual_seed(12345)
+
     if estimatorkwargs is None:
         estimatorkwargs = {}
     exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise, heteroskedastic=True)
@@ -87,12 +90,11 @@ def run_heteroskedastic_n_times(theta, noise, n_train, repititions, estimatortyp
     mses = []
     thetas = []
 
-    np.random.seed(12345)
     for i in range(repititions):
         exp.setup_data(n_train=n_train, n_val=n_train, n_test=20000)
         model = exp.init_model()
         estimator = estimatortype(model=model, **estimatorkwargs)
-        estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
+        estimator.train(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
         train_risks.append(exp.eval_test_risk(model, exp.x_train))
         test_risks.append(exp.eval_test_risk(model, exp.x_test))
         mses.append(np.mean(np.square(np.squeeze(model.get_parameters()) - exp.theta0)))

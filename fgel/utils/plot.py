@@ -125,7 +125,7 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
 
 
 if __name__ == "__main__":
-    plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic'],# 'KernelFGEL', 'KernelVMM'],
-                                  n_samples=[64, 128, 256, 512, 1024, 2048, 5096],#[50, 100, 200, 500, 1000, 2000],
+    plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL', 'KernelVMM', 'NeuralVMM'],
+                                  n_samples=[64, 128, 256, 512, 1024],#, 2048, 5096],#[50, 100, 200, 500, 1000, 2000],
                                   quantity='square_error',
                                   logscale=True,)

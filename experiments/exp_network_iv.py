@@ -132,8 +132,8 @@ if __name__ == '__main__':
     theta_optimizer_args = {"lr": 5e-4}
 
     estimator = NeuralFGEL(model=model, divergence='chi2', max_num_epochs=5000,
-                           f_optimizer_args=f_optimizer_args, theta_optim_args=theta_optimizer_args)
+                           f_optim_args=f_optimizer_args, theta_optim_args=theta_optimizer_args)
     # estimator = OrdinaryLeastSquares(model=model)
-    estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val, debugging=True)
+    estimator.train(exp.x_train, exp.z_train, exp.x_val, exp.z_val, debugging=True)
     exp.show_function(model, exp.x_test)
 

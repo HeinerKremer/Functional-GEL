@@ -16,7 +16,7 @@ class SMDIdentity(AbstractEstimationMethod):
         self.basis = MultiOutputPolynomialSplineBasis(z_dim=self.model.dim_z, num_out=self.psi_dim,
                                                       num_knots=num_knots, degree=polyn_degree)
 
-    def _fit_internal(self, x, z, x_val, z_val):
+    def _train_internal(self, x, z, x_val, z_val, debugging=False):
         self.basis.setup(z)
         f_z = self._calc_f_z(z)
         n = x[0].shape[0]
@@ -67,7 +67,7 @@ class SMDHomoskedastic(SMDIdentity):
         SMDIdentity.__init__(self, model=model,
                              num_knots=num_knots, polyn_degree=polyn_degree)
 
-    def _fit_internal(self, x, z, x_val, z_val):
+    def _train_internal(self, x, z, x_val, z_val, debugging=False):
         self.basis.setup(z)
         f_z = self._calc_f_z(z)
         n = x[0].shape[0]
@@ -88,7 +88,7 @@ class SMDHomoskedastic(SMDIdentity):
             return
         else:
             self.model.initialize()
-            SMDIdentity._fit_internal(self, x, z, x_val, z_val)
+            SMDIdentity._train_internal(self, x, z, x_val, z_val)
 
 
 class FlexibleVarNetwork(nn.Module):
@@ -116,7 +116,7 @@ class SMDHeteroskedastic(SMDIdentity):
         SMDIdentity.__init__(self, model=model,
                              num_knots=num_knots, polyn_degree=polyn_degree)
 
-    def _fit_internal(self, x, z, x_val, z_val):
+    def _train_internal(self, x, z, x_val, z_val, debugging=False):
         self.basis.setup(z)
         f_z = self._calc_f_z(z)
         n = x[0].shape[0]
@@ -147,7 +147,7 @@ class SMDHeteroskedastic(SMDIdentity):
             return
         else:
             self.model.initialize()
-            SMDIdentity._fit_internal(self, x, z, x_val, z_val)
+            SMDIdentity._train_internal(self, x, z, x_val, z_val)
 
     def _fit_var_network(self, z, targets, z_val=None, targets_dev=None,
                          max_epochs=10000, batch_size=128, max_no_improve=20):

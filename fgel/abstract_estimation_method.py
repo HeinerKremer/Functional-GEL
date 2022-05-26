@@ -8,7 +8,7 @@ class AbstractEstimationMethod:
     def __init__(self, model, kernel_args=None):
         self.model = model
         self.psi_dim = self.model.psi_dim
-        self.is_fit = False
+        self.is_trained = False
 
         # For validation purposes all methods use the kernel MMR loss and therefore require the kernel Gram matrices
         if kernel_args is None:
@@ -18,12 +18,12 @@ class AbstractEstimationMethod:
         self.k_cholesky = None
         self.kernel_z_val = None
 
-    def fit(self, x, z, x_dev, z_dev, debugging=False):
-        self._fit_internal(x, z, x_dev, z_dev, debugging=debugging)
-        self.is_fit = True
+    def train(self, x_train, z_train, x_val, z_val, debugging=True):
+        self._train_internal(x_train, z_train, x_val, z_val, debugging=debugging)
+        self.is_trained = True
 
     def get_trained_parameters(self):
-        if not self.is_fit:
+        if not self.is_trained:
             raise RuntimeError("Need to fit model before getting fitted params")
         return self.model.get_parameters()
 
@@ -48,7 +48,7 @@ class AbstractEstimationMethod:
     def _to_tensor(self, data_array):
         return np_to_tensor(data_array)
 
-    def _fit_internal(self, x, z, x_dev, z_dev, debugging=False):
+    def _train_internal(self, x, z, x_dev, z_dev, debugging=False):
         raise NotImplementedError()
 
     def _pretrain_theta(self, x, z, mmr=False):

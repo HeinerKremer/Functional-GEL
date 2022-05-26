@@ -37,7 +37,7 @@ def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_k
         else:
             hparam = {hyperparam: hyperval}
             estimator = estimator_class(model=model, **hparam, **estimator_kwargs)
-        estimator.fit(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
+        estimator.train(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
 
         models.append(model)
 
