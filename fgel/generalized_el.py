@@ -16,7 +16,7 @@ class GeneralizedEL(AbstractEstimationMethod):
 
     def __init__(self, model,
                  max_num_epochs=5000, eval_freq=500, max_no_improve=5, burn_in_cycles=5, pretrain=True, theta_optim_args=None,
-                 divergence=None, outeropt='lbfgs', inneropt='lbfgs', inneriters=None, kernel_args=None,
+                 divergence=None, outeropt=None, inneropt=None, inneriters=None, kernel_args=None,
                  verbose=False):
         AbstractEstimationMethod.__init__(self, model=model, kernel_args=kernel_args)
 

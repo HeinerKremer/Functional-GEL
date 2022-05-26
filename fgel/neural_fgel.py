@@ -73,9 +73,7 @@ class NeuralFGEL(GeneralizedEL):
         return float(theta_obj.detach().numpy())
 
     def _train_internal(self, x_train, z_train, x_val, z_val, debugging=False):
-        n = x_train[0].shape[0]
-        if self.batch_size is None:
-            self.batch_size = n
+        n = z_train.shape[0]
         batch_iter = BatchIter(n, self.batch_size)
         x_tensor = self._to_tensor(x_train)
         z_tensor = self._to_tensor(z_train)
@@ -127,7 +125,7 @@ class NeuralFGEL(GeneralizedEL):
 if __name__ == '__main__':
     from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    estimatorkwargs = dict(max_num_epochs=5000, eval_freq=50, divergence='kl')
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=2000, repititions=10,
+    estimatorkwargs = dict(max_num_epochs=5000, eval_freq=500, divergence='log')
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=5,
                                          estimatortype=NeuralFGEL, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])
