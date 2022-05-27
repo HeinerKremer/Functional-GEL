@@ -11,7 +11,7 @@ class NeuralVMM(NeuralFGEL):
         self.kernel_lambda = kernel_lambda
 
     def objective(self, x, z, *args):
-        f_of_z = self.f(z)
+        f_of_z = self.dual_func(z)
         m_vector = (self.model.psi(x) * f_of_z).sum(1)
         moment = m_vector.mean()
         ow_reg = 0.25 * (m_vector ** 2).mean()
@@ -35,7 +35,7 @@ class NeuralVMM(NeuralFGEL):
 if __name__ == "__main__":
     from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    estimatorkwargs = dict(max_num_epochs=5000, eval_freq=5000,)
+    estimatorkwargs = dict(max_num_epochs=5000, eval_freq=500,)
     results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=5,
                                           estimatortype=NeuralVMM, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])
