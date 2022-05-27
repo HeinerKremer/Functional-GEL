@@ -19,14 +19,14 @@ class KernelFGEL(GeneralizedEL):
         # For KernelFGEL alpha depends on sample size and will be initialized together with the kernel
         self.alpha = None
 
-    def set_kernel(self, z, z_val=None):
-        super().set_kernel(z=z, z_val=z_val)
+    def _set_kernel(self, z, z_val=None):
+        super()._set_kernel(z=z, z_val=z_val)
         if self.alpha is None:
             self.alpha = Parameter(shape=(self.kernel_z.shape[0], self.psi_dim))
 
-    def init_training(self, x_tensor, z_tensor=None, z_val_tensor=None):
-        self.set_kernel(z_tensor, z_val_tensor)
-        super().init_training(x_tensor, z_tensor)
+    def _init_training(self, x_tensor, z_tensor=None, z_val_tensor=None):
+        self._set_kernel(z_tensor, z_val_tensor)
+        super()._init_training(x_tensor, z_tensor)
 
     def compute_alpha_psi(self, x, z):
         return torch.einsum('jr, ji, ir -> i', self.alpha.params, self.kernel_z, self.model.psi(x))
@@ -35,16 +35,16 @@ class KernelFGEL(GeneralizedEL):
         return torch.einsum('ir, ij, jr ->', self.alpha.params, self.kernel_z, self.alpha.params)
 
     def objective(self, x, z, *args, **kwargs):
-        self.set_kernel(z)
+        self._set_kernel(z)
         alpha_k_psi = self.compute_alpha_psi(x, z)
         objective = torch.mean(self.gel_function(alpha_k_psi)) - self.reg_param/2 * self.get_rkhs_norm()
         # return objective
         return torch.mean(self.gel_function(alpha_k_psi)), torch.mean(self.gel_function(alpha_k_psi)) - self.reg_param/2 * self.get_rkhs_norm()
 
-    def optimize_alpha_cvxpy(self, x_tensor, z_tensor):
+    def _optimize_alpha_cvxpy(self, x_tensor, z_tensor):
         """CVXPY alpha optimization for kernelized objective"""
         n_sample = z_tensor.shape[0]
-        self.set_kernel(z_tensor)
+        self._set_kernel(z_tensor)
 
         with torch.no_grad():
             try:

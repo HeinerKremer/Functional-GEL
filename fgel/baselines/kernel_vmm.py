@@ -32,7 +32,7 @@ class KernelVMM(AbstractEstimationMethod):
     def _try_fit_internal(self, x, z, x_val, z_val, alpha):
         x_tensor = self._to_tensor(x)
 
-        self.set_kernel(z, z_val)
+        self._set_kernel(z, z_val)
 
         for iter_i in range(self.num_iter):
             # obtain m matrix for this iteration, using current theta parameter
@@ -51,7 +51,7 @@ class KernelVMM(AbstractEstimationMethod):
             optimizer.step(closure)
 
             if self.verbose and x_val is not None:
-                val_mmr_loss = self.calc_val_mmr(x_val, z_val)
+                val_mmr_loss = self._calc_val_mmr(x_val, z_val)
                 print("iter %d, validation MMR: %e" % (iter_i, val_mmr_loss))
 
     def _calc_m_matrix(self, x_tensor, alpha):

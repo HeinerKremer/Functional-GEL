@@ -14,7 +14,7 @@ class KernelMMR(AbstractEstimationMethod):
         z_tensor = self._to_tensor(z)
         n_sample = z_tensor.shape[0]
 
-        self.set_kernel(z, z_val)
+        self._set_kernel(z, z_val)
 
         optimizer = torch.optim.LBFGS(self.model.parameters(),
                                       line_search_fn="strong_wolfe")
@@ -28,7 +28,7 @@ class KernelMMR(AbstractEstimationMethod):
         optimizer.step(closure)
 
         if self.verbose and x_val is not None:
-            val_mmr = self.calc_val_mmr(x_val, z_val)
+            val_mmr = self._calc_val_mmr(x_val, z_val)
             print("Validation MMR loss: %e" % val_mmr)
 
 

@@ -45,7 +45,7 @@ def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_k
         train_risks.append(float(exp.eval_test_risk(model, exp.x_train)))
         test_risks.append(float(exp.eval_test_risk(model, exp.x_test)))
         mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
-        val_mmr.append(float(estimator.calc_val_mmr(exp.x_val, exp.z_val).detach().numpy()))
+        val_mmr.append(float(estimator._calc_val_mmr(exp.x_val, exp.z_val).detach().numpy()))
     if validation_metric == 'mmr' and len(models) > 1:
         val_mmr = np.nan_to_num(val_mmr, nan=np.inf)
         i = np.argmin(val_mmr)
