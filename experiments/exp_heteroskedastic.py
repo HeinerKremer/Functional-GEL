@@ -101,7 +101,7 @@ def run_heteroskedastic_n_times(theta, noise, n_train, repititions, estimatortyp
         thetas.append(float(np.squeeze(model.get_parameters())))
     print(rf'Test risk: {np.mean(test_risks)} $\pm$ {np.std(test_risks)}')
     print(rf'Parameter MSE: {np.mean(mses)} $\pm$ {np.std(mses)}')
-    results = {'theta': thetas, 'test_risk': test_risks, 'mse': mses}
+    results = {'theta': thetas, 'test_risk': test_risks, 'mse': mses, 'train_risk': train_risks}
     return results
 
 

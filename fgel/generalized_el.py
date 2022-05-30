@@ -15,7 +15,7 @@ cvx_solver = cvx.MOSEK
 class GeneralizedEL(AbstractEstimationMethod):
 
     def __init__(self, model,
-                 max_num_epochs=5000, eval_freq=500, max_no_improve=5, burn_in_cycles=5,
+                 max_num_epochs=50000, eval_freq=2000, max_no_improve=3, burn_in_cycles=5,
                  theta_optim=None, theta_optim_args=None, pretrain=True,
                  dual_optim=None, dual_optim_args=None, inneriters=None,
                  divergence=None, kernel_args=None,
@@ -45,7 +45,7 @@ class GeneralizedEL(AbstractEstimationMethod):
 
         self.optimize_step = None
 
-        self.max_num_epochs = max_num_epochs if not self.theta_optim_type == 'lbfgs' else 1
+        self.max_num_epochs = max_num_epochs if not self.theta_optim_type == 'lbfgs' else 3
         self.eval_freq = eval_freq
         self.max_no_improve = max_no_improve
         self.burn_in_cycles = burn_in_cycles
@@ -96,7 +96,9 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.divergence_type == 'log':
             def divergence(x=None, cvxpy=False):
                 if not cvxpy:
-                    return torch.log(self.softplus(1 - x) + 1)
+                    # return torch.log(1 - x)
+                    return torch.log(self.softplus(1 - x) + 1 / x.shape[0])
+                    # return torch.log(self.softplus(1 - x.shape[0] * x) + 1e-3)
                 else:
                     return cvx.log(1 - x)
 
@@ -187,6 +189,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             return obj
 
         self.theta_optimizer.step(closure)
+        # print(self.theta_optimizer.state_dict())
         return [float(loss.detach().numpy()) for loss in losses]
 
     def _gradient_descent_ascent_step(self, x_tensor, z_tensor):
@@ -195,6 +198,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         # update theta
         self.theta_optimizer.zero_grad()
         theta_obj.backward(retain_graph=True)
+        # theta_obj.backward()
         self.theta_optimizer.step()
 
         # update dual function
@@ -238,13 +242,13 @@ class GeneralizedEL(AbstractEstimationMethod):
         def closure():
             if torch.is_grad_enabled():
                 self.dual_func_optimizer.zero_grad()
-            # loss = - self.objective(x_tensor, z_tensor)
             _, loss_dual_func = self.objective(x_tensor, z_tensor)
             if loss_dual_func.requires_grad:
                 loss_dual_func.backward()
             return loss_dual_func
 
-        self.dual_func_optimizer.step(closure)
+        for _ in range(2):
+            self.dual_func_optimizer.step(closure)
         if np.isnan(np.linalg.norm(self.dual_func.params.detach().numpy())):
             with torch.no_grad():
                 self.dual_func.params.copy_(torch.zeros(self.dual_func.shape, dtype=torch.float32))
@@ -256,11 +260,11 @@ class GeneralizedEL(AbstractEstimationMethod):
             _, loss_dual_func = self.objective(x_tensor, z_tensor)
             loss_dual_func.backward()
             self.dual_func_optimizer.step()
-            if self.divergence_type == 'log':
-                with torch.no_grad():
-                    dual_func_k_psi = self.compute_dual_func_psi(x_tensor, z_tensor)
-                    dual_func, _ = self.dual_func.project_log_input_constraint(dual_func_k_psi)
-                    self.dual_func.update_params(dual_func)
+            # if self.divergence_type == 'log':
+            #     with torch.no_grad():
+            #         dual_func_k_psi = self.compute_dual_func_psi(x_tensor, z_tensor)
+            #         dual_func, _ = self.dual_func.project_log_input_constraint(dual_func_k_psi)
+            #         self.dual_func.update_params(dual_func)
             return loss_dual_func
 
     def _init_training(self, x_tensor, z_tensor, z_val_tensor=None):
@@ -322,8 +326,11 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.verbose:
             print("time taken:", time.time() - time_0)
         if debugging:
-            plt.plot(loss[1:])
-            plt.show()
+            try:
+                plt.plot(loss)
+                plt.show()
+            except:
+                pass
 
     """--------------------- Visualization methods ---------------------"""
     # def compute_weights(self, x, z):

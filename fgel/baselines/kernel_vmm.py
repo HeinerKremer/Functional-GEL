@@ -74,7 +74,7 @@ class KernelVMM(AbstractEstimationMethod):
 if __name__ == '__main__':
     from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    estimatorkwargs = dict(alpha=1e-3)
+    estimatorkwargs = dict(alpha=1e-6)
     results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=20,
                                           estimatortype=KernelVMM, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])

@@ -10,7 +10,7 @@ cvx_solver = cvx.MOSEK
 
 class KernelFGEL(GeneralizedEL):
 
-    def __init__(self, reg_param=1e-6, **kwargs):
+    def __init__(self, reg_param=1e-3, **kwargs):
         super().__init__(**kwargs)
         self.reg_param = reg_param
 
@@ -23,7 +23,7 @@ class KernelFGEL(GeneralizedEL):
     def objective(self, x, z, *args, **kwargs):
         dual_func_k_psi = torch.einsum('jr, ji, ir -> i', self.dual_func.params, self.kernel_z, self.model.psi(x))
         objective = torch.mean(self.gel_function(dual_func_k_psi))
-        regularizer = self.reg_param/2 * self.get_rkhs_norm()
+        regularizer = self.reg_param/2 * torch.sqrt(self.get_rkhs_norm())
         return objective, -objective + regularizer
 
     def _optimize_dual_func_cvxpy(self, x_tensor, z_tensor):
@@ -57,8 +57,9 @@ class KernelFGEL(GeneralizedEL):
 if __name__ == '__main__':
     from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    estimatorkwargs = dict(divergence='kl', theta_optim='oadam_gda', dual_optim=None,
-                           max_num_epochs=5000, eval_freq=500, inneriters=500)
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=5,
+    estimatorkwargs = dict(divergence='kl', theta_optim='lbfgs', dual_optim='lbfgs',
+                           max_num_epochs=50000, eval_freq=2000, pretrain=True)
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=30,
                                           estimatortype=KernelFGEL, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])
+    print('Train risk: ', results['train_risk'])

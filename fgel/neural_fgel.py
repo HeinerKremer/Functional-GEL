@@ -1,6 +1,7 @@
 import torch
+
+from fgel.baselines.least_squares import OrdinaryLeastSquares
 from fgel.generalized_el import GeneralizedEL
-from fgel.utils.oadam import OAdam
 from fgel.utils.torch_utils import ModularMLPModel
 
 
@@ -43,7 +44,11 @@ class NeuralFGEL(GeneralizedEL):
 if __name__ == '__main__':
     from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    estimatorkwargs = dict(max_num_epochs=5000, eval_freq=500, divergence='chi2')
     results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=5,
+                                          estimatortype=OrdinaryLeastSquares)
+    print('Pretrained Thetas: ', results['theta'])
+
+    estimatorkwargs = dict(max_num_epochs=50000, eval_freq=2000, divergence='log')
+    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=2000, repititions=2,
                                           estimatortype=NeuralFGEL, estimatorkwargs=estimatorkwargs)
     print('Thetas: ', results['theta'])
