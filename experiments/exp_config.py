@@ -58,25 +58,32 @@ methods = {
                                  "eval_freq": 2000,
                                  "max_no_improve": 3,
                                  },
-            'hyperparams': {"lambda": [0, 1e-4, 1e-2, 1e0]}
+            'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
         },
+}
 
-    'KernelFGEL':
-        {
+for divergence in ['chi2', 'kl', 'log']:
+    methods[f'KernelFGEL-{divergence}'] = {
             'estimator_class': KernelFGEL,
             'estimator_kwargs': {
-                "divergence": 'chi2',
-                "outeropt": 'lbfgs',
-                "inneropt": 'lbfgs',
-                "eval_freq": 500,
-                "max_num_epochs": 10000,},
-            'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4]}
-        },
+                "divergence": divergence,
+                "dual_optim": 'lbfgs',
+                "theta_optim": 'lbfgs',
+                "eval_freq": 2000,
+                "max_num_epochs": 50000,},
+            'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8]}
+        }
 
-    'NeuralFGEL':
-        {
-            'estimator_class': NeuralFGEL,
-            'estimator_kwargs': {},
-            'hyperparams': {}
-        },
-    }
+for divergence in ['chi2', 'kl', 'log']:
+    methods[f'NeuralFGEL-{divergence}'] = {
+                                            'estimator_class': NeuralFGEL,
+                                            'estimator_kwargs': {
+                                                "divergence": divergence,
+                                                "batch_size": 200,
+                                                "max_num_epochs": 50000,
+                                                "burn_in_cycles": 5,
+                                                "eval_freq": 2000,
+                                                "max_no_improve": 3,
+                                            },
+                                            'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
+                                        },

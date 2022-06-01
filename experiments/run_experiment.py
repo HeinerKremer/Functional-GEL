@@ -1,9 +1,12 @@
 import argparse
+import copy
 import json
 import os
 
 import numpy as np
 import torch
+from concurrent.futures import ProcessPoolExecutor
+import multiprocessing
 
 
 def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_kwargs=None,
@@ -57,32 +60,41 @@ def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_k
              'test_risk': test_risks[i],
              'mse': mses[i],
              'val_mmr': val_mmr[i]}
-    return models[i], stats
+    return stats
 
 
 def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, estimator_kwargs, hyperparams,
-                            repititions, seed0=12345, filename=None):
+                            repititions, seed0=12345, parallel=True, filename=None):
     """
     Runs the same experiment `repititions` times and computes statistics.
     """
+    if parallel:
+        results = run_parallel(experiment=experiment, exp_params=exp_params, n_train=n_train, estimator_class=estimator_class,
+                              estimator_kwargs=estimator_kwargs, hyperparams=hyperparams, repititions=repititions, seed0=seed0)
+    else:
+        print('Using sequential debugging mode.')
+        results = []
+        for i in range(repititions):
+            stats = run_experiment(experiment=experiment, exp_params=exp_params, n_train=n_train,
+                                      estimator_class=estimator_class, estimator_kwargs=estimator_kwargs,
+                                      hyperparams=hyperparams, validation_metric='mmr', seed0=seed0+i)
+            results.append(stats)
+
+
     hypervals = []
     train_risk = []
     test_risk = []
     mse = []
     val_mmr = []
 
-    for i in range(repititions):
-        _, stats = run_experiment(experiment=experiment, exp_params=exp_params, n_train=n_train,
-                                  estimator_class=estimator_class, estimator_kwargs=estimator_kwargs,
-                                  hyperparams=hyperparams, validation_metric='mmr', seed0=seed0+i)
-
+    for stats in results:
         hypervals.append(stats['hyperparam'])
         train_risk.append(stats['train_risk'])
         test_risk.append(stats['test_risk'])
         mse.append(stats['mse'])
         val_mmr.append(stats['val_mmr'])
 
-    results = {"mean_square_error": np.mean(mse),
+    results_summarized = {"mean_square_error": np.mean(mse),
                 "std_square_error": np.std(mse),
                 "max_square_error": np.max(mse),
                 "mean_risk": np.mean(test_risk),
@@ -93,14 +105,33 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
                 "n_runs": repititions,
                 "hyperparam_values": hypervals,
                 "train_risks": train_risk,
-               
                }
 
     if filename is not None:
-        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={str(estimator_class.__name__)}_n={n_train}"
+        if str(estimator_class.__name__) in {'KernelFGEL', 'NeuralFGEL'}:
+            divergence = f'-{estimator_kwargs["divergence"]}'
+        else:
+            divergence = ""
+        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={str(estimator_class.__name__)}{divergence}_n={n_train}"
         os.makedirs(os.path.dirname(prefix), exist_ok=True)
         with open(prefix + filename + ".json", "w") as fp:
-            json.dump(results, fp)
+            json.dump(results_summarized, fp)
+    return results_summarized
+
+
+def run_parallel(experiment, exp_params, n_train, estimator_class, estimator_kwargs, hyperparams, repititions, seed0):
+    experiment_list = [copy.deepcopy(experiment) for _ in range(repititions)]
+    exp_params_list = [copy.deepcopy(exp_params) for _ in range(repititions)]
+    n_train_list = [copy.deepcopy(n_train) for _ in range(repititions)]
+    estimator_class_list = [copy.deepcopy(estimator_class) for _ in range(repititions)]
+    estimator_kwargs_list = [copy.deepcopy(estimator_kwargs) for _ in range(repititions)]
+    hyperparams_list = [copy.deepcopy(hyperparams) for _ in range(repititions)]
+    validation_loss_list = ['mmr' for _ in range(repititions)]
+    seeds = [seed0+i for i in range(repititions)]
+
+    with ProcessPoolExecutor(min(multiprocessing.cpu_count(), repititions)) as ex:
+        results = ex.map(run_experiment, experiment_list, exp_params_list, n_train_list, estimator_class_list,
+                         estimator_kwargs_list, hyperparams_list, validation_loss_list, seeds)
     return results
 
 
@@ -134,10 +165,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_all', action='store_true')
+    parser.add_argument('--run_sequential', action='store_true')
     parser.add_argument('--experiment', type=str, default='heteroskedastic')
     parser.add_argument('--n_train', type=int, default=100)
     parser.add_argument('--method', type=str, default='OrdinaryLeastSquares')
-    parser.add_argument('--rollouts', type=int, default=1)
+    parser.add_argument('--rollouts', type=int, default=4)
     parser.add_argument('--filename', type=str, default='')
 
     args = parser.parse_args()
@@ -155,5 +187,6 @@ if __name__ == "__main__":
                                           estimator_kwargs=estimator_info['estimator_kwargs'],
                                           hyperparams=estimator_info['hyperparams'],
                                           repititions=args.rollouts,
+                                          parallel=not args.run_sequential,
                                           filename=args.filename)
         print(results)

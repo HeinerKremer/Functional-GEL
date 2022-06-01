@@ -34,6 +34,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         self.gel_function = self._set_gel_function()
 
         self.dual_func = None
+        self.dual_normalization = None
         self.dual_optim_type = dual_optim
         self.dual_func_optim_args = dual_optim_args
         self.dual_func_optimizer = None
@@ -105,7 +106,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         elif self.divergence_type == 'chi2':
             def divergence(x=None, cvxpy=False):
                 if not cvxpy:
-                    return - torch.square(1/2 * x + 1)  # -1/2 * torch.square(x + 1)
+                    return - 1/2 * torch.square(x + 1)  # -1/2 * torch.square(x + 1)
                 else:
                     return - cvx.square(1/2 * x + 1)
         elif self.divergence_type == 'kl':
@@ -129,9 +130,14 @@ class GeneralizedEL(AbstractEstimationMethod):
             self.dual_func_optimizer = OAdam(params=self.dual_func.parameters(),
                                              lr=self.dual_func_optim_args["lr"], betas=(0.5, 0.9))
         elif self.dual_optim_type == 'lbfgs':
-            self.dual_func_optimizer = torch.optim.LBFGS(self.dual_func.parameters(),
-                                                         max_iter=500,
-                                                         line_search_fn="strong_wolfe")
+            if self.dual_normalization is None:
+                self.dual_func_optimizer = torch.optim.LBFGS(self.dual_func.parameters(),
+                                                             max_iter=500,
+                                                             line_search_fn="strong_wolfe")
+            else:
+                self.dual_func_optimizer = torch.optim.LBFGS(list(self.dual_func.parameters()) + list(self.dual_normalization.parameters()),
+                                                             max_iter=500,
+                                                             line_search_fn="strong_wolfe")
         else:
             self.dual_func_optimizer = None
 
@@ -154,7 +160,7 @@ class GeneralizedEL(AbstractEstimationMethod):
 
         # Optimistic Adam gradient descent ascent (e.g. for neural FGEL/VMM)
         if self.theta_optim_type == 'oadam_gda' or self.dual_optim_type == 'oadam_gda':
-            self.dual_func_optimizer = OAdam(params=self.dual_func.parameters(), lr=self.dual_func_optim_args["lr"],
+            self.dual_func_optimizer = OAdam(params=list(self.dual_func.parameters()) + list(self.dual_normalization.parameters()), lr=self.dual_func_optim_args["lr"],
                                              betas=(0.5, 0.9))
             self.theta_optimizer = OAdam(params=self.model.parameters(), lr=self.theta_optim_args["lr"],
                                          betas=(0.5, 0.9))
