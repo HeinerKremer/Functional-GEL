@@ -120,7 +120,7 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
 
     plt.legend()
     plt.tight_layout()
-    plt.savefig('method_comparison.pdf', dpi=200)
+    plt.savefig('/results/HeteroskedasticNoisePlot.pdf', dpi=200)
     plt.show()
 
 
