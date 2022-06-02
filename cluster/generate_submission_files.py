@@ -9,8 +9,8 @@ bid = 12
 # ---------------- Simulation details ----------------
 experiments = [
     ('heteroskedastic', {'n_train': [64, 128, 256, 512, 1024, 2048, 5096],
-                                    'methods': [name for name in methods.keys()],
-                                    'rollouts': [70],}
+                         'method': [name for name in methods.keys()],
+                         'rollouts': [70],}
      )
 ]
 
