@@ -140,7 +140,7 @@ def run_all(experiment, repititions, method=None):
     Runs all methods for all sample sizes `n_train_list` sequentially `repititions` times. This can be used if one has
     only access to a single machine instead of a computer cluster. Might take a long time to finish.
     """
-    from exp_config import methods, experiments
+    from experiments.exp_config import methods, experiments
 
     exp_info = experiments[experiment]
 
@@ -161,7 +161,7 @@ def run_all(experiment, repititions, method=None):
 
 
 if __name__ == "__main__":
-    from exp_config import methods, experiments
+    from experiments.exp_config import methods, experiments
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_all', action='store_true')

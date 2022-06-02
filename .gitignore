@@ -15,7 +15,6 @@ downloads/
 eggs/
 .eggs/
 .idea/
-experiments/results/*
 lib/
 lib64/
 parts/
@@ -132,5 +131,9 @@ dmypy.json
 .pyre/
 
 # Cluster files
-experiments/cluster/*
-!experiments/cluster/generate_submission_files.py
+cluster/*
+!cluster/generate_submission_files.py
+experiments/.DS_Store
+.DS_Store
+results/*
+

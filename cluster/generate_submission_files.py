@@ -33,9 +33,6 @@ def get_run_path():
 
 path = get_run_path()
 venvpath = path + '/fgel_venv'
-path = path + '/experiments'
-
-print(path)
 
 # ----------------
 
