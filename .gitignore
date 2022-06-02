@@ -15,7 +15,7 @@ downloads/
 eggs/
 .eggs/
 .idea/
-experiments/results/
+experiments/results/*
 lib/
 lib64/
 parts/
@@ -108,6 +108,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+fgel_venv/
 ENV/
 env.bak/
 venv.bak/
@@ -129,3 +130,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Cluster files
+experiments/cluster/*
+!experiments/cluster/generate_submission_files.py

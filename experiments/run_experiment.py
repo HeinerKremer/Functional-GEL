@@ -169,7 +169,7 @@ if __name__ == "__main__":
     parser.add_argument('--experiment', type=str, default='heteroskedastic')
     parser.add_argument('--n_train', type=int, default=100)
     parser.add_argument('--method', type=str, default='OrdinaryLeastSquares')
-    parser.add_argument('--rollouts', type=int, default=4)
+    parser.add_argument('--rollouts', type=int, default=2)
     parser.add_argument('--filename', type=str, default='')
 
     args = parser.parse_args()
