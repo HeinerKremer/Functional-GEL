@@ -3,12 +3,12 @@ from experiments.exp_config import methods
 
 # ---------------- Cluster resources
 cpus = 16
-memory = 64000
+memory = 128000
 bid = 12
 
 # ---------------- Simulation details ----------------
 experiments = [
-    ('heteroskedastic', {'n_train': [64, 128, 256, 512, 1024, 2048, 5096],
+    ('heteroskedastic', {'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
                          'method': [name for name in methods.keys()],
                          'rollouts': [70],}
      )

@@ -16,7 +16,7 @@ experiments = {
             'exp_params': {'theta': [1.7],
                            'noise': 1.0,
                            'heteroskedastic': True, },
-            'n_train': [64, 128, 256, 512, 1024, 2048]  #  5096],
+            'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
         }
 }
 
