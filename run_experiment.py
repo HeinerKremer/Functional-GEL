@@ -85,6 +85,7 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
     train_risk = []
     test_risk = []
     mse = []
+    params = []
     val_mmr = []
 
     for stats in results:
@@ -92,20 +93,23 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
         train_risk.append(stats['train_risk'])
         test_risk.append(stats['test_risk'])
         mse.append(stats['mse'])
+        params.append(stats['param'])
         val_mmr.append(stats['val_mmr'])
 
-    results_summarized = {"mean_square_error": np.mean(mse),
-                "std_square_error": np.std(mse),
-                "max_square_error": np.max(mse),
-                "mean_risk": np.mean(test_risk),
-                "std_risk": np.std(test_risk),
-                "max_risk": np.max(test_risk),
-                "mean_mmr_loss": np.mean(val_mmr),
-                "std_mmr_loss": np.std(val_mmr),
-                "n_runs": repititions,
-                "hyperparam_values": hypervals,
-                "train_risks": train_risk,
-               }
+    results_summarized = {
+        "mean_square_error": np.mean(mse),
+        "std_square_error": np.std(mse),
+        "max_square_error": np.max(mse),
+        "mean_risk": np.mean(test_risk),
+        "std_risk": np.std(test_risk),
+        "max_risk": np.max(test_risk),
+        "mean_mmr_loss": np.mean(val_mmr),
+        "std_mmr_loss": np.std(val_mmr),
+        "n_runs": repititions,
+        "hyperparam_values": hypervals,
+        "train_risks": train_risk,
+        "params": params,
+    }
 
     if filename is not None:
         if str(estimator_class.__name__) in {'KernelFGEL', 'NeuralFGEL'}:

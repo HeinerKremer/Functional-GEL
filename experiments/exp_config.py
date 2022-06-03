@@ -13,10 +13,10 @@ experiments = {
     'heteroskedastic':
         {
             'exp_class': HeteroskedasticNoiseExperiment,
-            'exp_params': {'theta': [2.4],
+            'exp_params': {'theta': [1.7],
                            'noise': 1.0,
-                           'heteroskedastic': True,},
-            'n_train': [64, 128, 256, 512, 1024, ]#,2048, 5096],
+                           'heteroskedastic': True, },
+            'n_train': [64, 128, 256, 512, 1024, 2048]  #  5096],
         }
 }
 
