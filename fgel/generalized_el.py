@@ -97,9 +97,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.divergence_type == 'log':
             def divergence(x=None, cvxpy=False):
                 if not cvxpy:
-                    # return torch.log(1 - x)
                     return torch.log(self.softplus(1 - x) + 1 / x.shape[0])
-                    # return torch.log(self.softplus(1 - x.shape[0] * x) + 1e-3)
                 else:
                     return cvx.log(1 - x)
 
@@ -160,7 +158,11 @@ class GeneralizedEL(AbstractEstimationMethod):
 
         # Optimistic Adam gradient descent ascent (e.g. for neural FGEL/VMM)
         if self.theta_optim_type == 'oadam_gda' or self.dual_optim_type == 'oadam_gda':
-            self.dual_func_optimizer = OAdam(params=list(self.dual_func.parameters()) + list(self.dual_normalization.parameters()), lr=self.dual_func_optim_args["lr"],
+            if self.dual_normalization is not None:
+                dual_params = list(self.dual_func.parameters()) + list(self.dual_normalization.parameters())
+            else:
+                dual_params = self.dual_func.parameters()
+            self.dual_func_optimizer = OAdam(params=dual_params, lr=self.dual_func_optim_args["lr"],
                                              betas=(0.5, 0.9))
             self.theta_optimizer = OAdam(params=self.model.parameters(), lr=self.theta_optim_args["lr"],
                                          betas=(0.5, 0.9))
@@ -280,7 +282,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)
 
-    def _train_internal(self, x_train, z_train, x_val, z_val, debugging=False):
+    def _train_internal(self, x_train, z_train, x_val, z_val, debugging):
         x_tensor = self._to_tensor(x_train)
         z_tensor = self._to_tensor(z_train)
         x_val_tensor = self._to_tensor(x_val)

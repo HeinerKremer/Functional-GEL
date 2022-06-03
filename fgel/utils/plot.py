@@ -15,7 +15,7 @@ figsize = (LINE_WIDTH*1.4, LINE_WIDTH/2)
 
 labels = {'SMDIdentity': 'SMD',
           'SMDHeteroskedastic': 'SMD',
-          'KernelFGEL': 'K-FGEL',
+          'KernelFGEL-chi2': 'K-FGEL',
           'NeuralFGEL': 'NN-FGEL',
           'KernelMMR': 'MMR',
           'OrdinaryLeastSquares': 'LSQ',
@@ -89,7 +89,7 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
     n_samples = np.sort(n_samples)
     for n_train in n_samples:
         for method in methods:
-            filename = f"experiments/results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}_n={n_train}.json"
+            filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}_n={n_train}.json"
             with open(filename, "r") as fp:
                 res = json.load(fp)
             results[method]['mean'].append(res['mean_'+quantity])
@@ -120,12 +120,12 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
 
     plt.legend()
     plt.tight_layout()
-    plt.savefig('/results/HeteroskedasticNoisePlot.pdf', dpi=200)
+    plt.savefig('results/HeteroskedasticNoisePlot.pdf', dpi=200)
     plt.show()
 
 
 if __name__ == "__main__":
-    plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL', 'KernelVMM', 'NeuralVMM'],
-                                  n_samples=[64, 128, 256, 512, 1024],#, 2048, 5096],#[50, 100, 200, 500, 1000, 2000],
+    plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM'],
+                                  n_samples=[64, 128, 256, 512, 1024, 2048],#[50, 100, 200, 500, 1000, 2000],
                                   quantity='square_error',
                                   logscale=True,)

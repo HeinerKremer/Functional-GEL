@@ -16,7 +16,7 @@ class SMDIdentity(AbstractEstimationMethod):
         self.basis = MultiOutputPolynomialSplineBasis(z_dim=self.model.dim_z, num_out=self.psi_dim,
                                                       num_knots=num_knots, degree=polyn_degree)
 
-    def _train_internal(self, x, z, x_val, z_val, debugging=False):
+    def _train_internal(self, x, z, x_val, z_val, debugging):
         self.basis.setup(z)
         f_z = self._calc_f_z(z)
         n = x[0].shape[0]
@@ -67,7 +67,7 @@ class SMDHomoskedastic(SMDIdentity):
         SMDIdentity.__init__(self, model=model,
                              num_knots=num_knots, polyn_degree=polyn_degree)
 
-    def _train_internal(self, x, z, x_val, z_val, debugging=False):
+    def _train_internal(self, x, z, x_val, z_val, debugging):
         self.basis.setup(z)
         f_z = self._calc_f_z(z)
         n = x[0].shape[0]
@@ -116,7 +116,7 @@ class SMDHeteroskedastic(SMDIdentity):
         SMDIdentity.__init__(self, model=model,
                              num_knots=num_knots, polyn_degree=polyn_degree)
 
-    def _train_internal(self, x, z, x_val, z_val, debugging=False):
+    def _train_internal(self, x, z, x_val, z_val, debugging):
         self.basis.setup(z)
         f_z = self._calc_f_z(z)
         n = x[0].shape[0]

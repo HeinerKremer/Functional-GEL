@@ -7,7 +7,7 @@ class OrdinaryLeastSquares(AbstractEstimationMethod):
     def __init__(self, model):
         AbstractEstimationMethod.__init__(self, model)
 
-    def _train_internal(self, x, z, x_dev, z_dev, debugging=False):
+    def _train_internal(self, x, z, x_dev, z_dev, debugging):
         x_tensor = self._to_tensor(x)
         z_tensor = self._to_tensor(z)
         n_sample = z_tensor.shape[0]

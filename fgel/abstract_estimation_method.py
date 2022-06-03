@@ -19,7 +19,7 @@ class AbstractEstimationMethod:
         self.k_cholesky = None
         self.kernel_z_val = None
 
-    def train(self, x_train, z_train, x_val, z_val, debugging=True):
+    def train(self, x_train, z_train, x_val, z_val, debugging=False):
         self._train_internal(x_train, z_train, x_val, z_val, debugging=debugging)
         self.is_trained = True
 
@@ -49,7 +49,7 @@ class AbstractEstimationMethod:
     def _to_tensor(self, data_array):
         return np_to_tensor(data_array)
 
-    def _train_internal(self, x, z, x_dev, z_dev, debugging=False):
+    def _train_internal(self, x, z, x_dev, z_dev, debugging):
         raise NotImplementedError()
 
     def _pretrain_theta(self, x, z, mmr=True):

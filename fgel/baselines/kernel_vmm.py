@@ -12,7 +12,7 @@ class KernelVMM(AbstractEstimationMethod):
         self.num_iter = num_iter
         self.verbose = verbose
 
-    def _train_internal(self, x, z, x_val, z_val, debugging=False):
+    def _train_internal(self, x, z, x_val, z_val, debugging):
         alpha = self.alpha
         while True:
             try:
