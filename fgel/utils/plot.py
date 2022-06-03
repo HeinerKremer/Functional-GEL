@@ -78,7 +78,7 @@ NEURIPS_RCPARAMS = {
 }
 
 
-def plot_results_over_sample_size(methods, n_samples, quantity='square_error', logscale=False, divergence=None):
+def plot_results_over_sample_size(methods, n_samples, quantity='square_error', logscale=False, divergence=None, remove_failed=False):
     plt.rcParams.update(NEURIPS_RCPARAMS)
     sns.set_theme()
 
@@ -92,8 +92,15 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
             filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}_n={n_train}.json"
             with open(filename, "r") as fp:
                 res = json.load(fp)
-            results[method]['mean'].append(res['mean_'+quantity])
-            results[method]['std'].append(res['std_'+quantity] / np.sqrt(res['n_runs']))
+            if not remove_failed:
+                results[method]['mean'].append(res['mean_'+quantity])
+                results[method]['std'].append(res['std_'+quantity] / np.sqrt(res['n_runs']))
+            else:
+                indeces = np.argsort(res['val_mmr'])
+                best = res['mse'][indeces]
+                best = best[:int(0.9 * len(best))]
+                results[method]['mean'].append(np.mean(best))
+                results[method]['std'].append(np.std(best))
 
     n_plots = 1
     # figsize = (LINE_WIDTH, LINE_WIDTH / 2)
@@ -128,4 +135,5 @@ if __name__ == "__main__":
     plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM'],
                                   n_samples=[64, 128, 256, 512, 1024, 2048],#[50, 100, 200, 500, 1000, 2000],
                                   quantity='square_error',
-                                  logscale=True,)
+                                  logscale=True,
+                                  remove_failed=True)

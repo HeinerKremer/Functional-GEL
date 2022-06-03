@@ -109,6 +109,9 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
         "hyperparam_values": hypervals,
         "train_risks": train_risk,
         "params": params,
+        "test_risk": test_risk,
+        "mse": mse,
+        "val_mmr": val_mmr,
     }
 
     if filename is not None:
