@@ -27,61 +27,60 @@ experiments = {
         }
 }
 
-# methods = {
-#     'OrdinaryLeastSquares':
-#         {
-#             'estimator_class': OrdinaryLeastSquares,
-#             'estimator_kwargs': {},
-#             'hyperparams': {},
-#         },
-#
-#     'KernelMMR':
-#         {
-#             'estimator_class': KernelMMR,
-#             'estimator_kwargs': {},
-#             'hyperparams': {},
-#         },
-#
-#     'SieveMinimumDistance':
-#         {
-#             'estimator_class': SMDHeteroskedastic,
-#             'estimator_kwargs': {},
-#             'hyperparams': {}
-#         },
-#
-#     'KernelVMM':
-#         {
-#             'estimator_class': KernelVMM,
-#             'estimator_kwargs': {},
-#             'hyperparams': {'alpha': [1e-8, 1e-6, 1e-4]}
-#         },
-#
-#     'NeuralVMM':
-#         {
-#             'estimator_class': NeuralVMM,
-#             'estimator_kwargs': {"batch_size": 200,
-#                                  "max_num_epochs": 50000,
-#                                  "burn_in_cycles": 5,
-#                                  "eval_freq": 2000,
-#                                  "max_no_improve": 3,
-#                                  },
-#             'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
-#         },
-# }
-#
-# for divergence in ['chi2', 'kl', 'log']:
-#     methods[f'KernelFGEL-{divergence}'] = {
-#         'estimator_class': KernelFGEL,
-#         'estimator_kwargs': {
-#                 "divergence": divergence,
-#                 "dual_optim": 'lbfgs',
-#                 "theta_optim": 'lbfgs',
-#                 "eval_freq": 2000,
-#                 "max_num_epochs": 50000,},
-#         'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8]}
-#         }
+methods = {
+    'OrdinaryLeastSquares':
+        {
+            'estimator_class': OrdinaryLeastSquares,
+            'estimator_kwargs': {},
+            'hyperparams': {},
+        },
 
-methods = dict()
+    'KernelMMR':
+        {
+            'estimator_class': KernelMMR,
+            'estimator_kwargs': {},
+            'hyperparams': {},
+        },
+
+    'SieveMinimumDistance':
+        {
+            'estimator_class': SMDHeteroskedastic,
+            'estimator_kwargs': {},
+            'hyperparams': {}
+        },
+
+    'KernelVMM':
+        {
+            'estimator_class': KernelVMM,
+            'estimator_kwargs': {},
+            'hyperparams': {'alpha': [1e-8, 1e-6, 1e-4]}
+        },
+
+    'NeuralVMM':
+        {
+            'estimator_class': NeuralVMM,
+            'estimator_kwargs': {"batch_size": 200,
+                                 "max_num_epochs": 50000,
+                                 "burn_in_cycles": 5,
+                                 "eval_freq": 2000,
+                                 "max_no_improve": 3,
+                                 },
+            'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
+        },
+}
+
+for divergence in ['chi2', 'kl', 'log']:
+    methods[f'KernelFGEL-{divergence}'] = {
+        'estimator_class': KernelFGEL,
+        'estimator_kwargs': {
+                "divergence": divergence,
+                "dual_optim": 'lbfgs',
+                "theta_optim": 'lbfgs',
+                "eval_freq": 2000,
+                "max_num_epochs": 50000,},
+        'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8]}
+        }
+
 for divergence in ['chi2', 'kl', 'log']:
     methods[f'KernelFGEL-{divergence}-oadam'] = {
         'estimator_class': KernelFGEL,
@@ -95,15 +94,15 @@ for divergence in ['chi2', 'kl', 'log']:
         'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8]}
         }
 
-# for divergence in ['chi2', 'kl', 'log']:
-#     methods[f'NeuralFGEL-{divergence}'] = {
-#         'estimator_class': NeuralFGEL,
-#         'estimator_kwargs': {
-#             "divergence": divergence,
-#             "batch_size": 200,
-#             "max_num_epochs": 50000,
-#             "burn_in_cycles": 5,
-#             "eval_freq": 2000,
-#             "max_no_improve": 3,},
-#         'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
-#         }
+for divergence in ['chi2', 'kl', 'log']:
+    methods[f'NeuralFGEL-{divergence}'] = {
+        'estimator_class': NeuralFGEL,
+        'estimator_kwargs': {
+            "divergence": divergence,
+            "batch_size": 200,
+            "max_num_epochs": 50000,
+            "burn_in_cycles": 5,
+            "eval_freq": 2000,
+            "max_no_improve": 3,},
+        'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
+        }
