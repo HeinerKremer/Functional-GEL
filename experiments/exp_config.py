@@ -86,7 +86,7 @@ for divergence in ['chi2', 'kl', 'log']:
         'estimator_class': KernelFGEL,
         'estimator_kwargs': {
             "divergence": divergence,
-            "batch_size": 200,
+            'theta_optim': 'oadam_gda',
             "max_num_epochs": 50000,
             "burn_in_cycles": 5,
             "eval_freq": 2000,
