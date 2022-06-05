@@ -1,4 +1,5 @@
 from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
+from experiments.exp_network_iv import NetworkIVExperiment
 
 from fgel.baselines.least_squares import OrdinaryLeastSquares
 from fgel.baselines.kernel_mmr import KernelMMR
@@ -17,6 +18,12 @@ experiments = {
                            'noise': 1.0,
                            'heteroskedastic': True, },
             'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
+        },
+
+    'network_iv':
+        {
+            'exp_class': NetworkIVExperiment,
+
         }
 }
 

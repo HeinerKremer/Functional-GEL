@@ -55,7 +55,6 @@ class NetworkIVExperiment(AbstractExperiment):
         self.ftype = ftype
         self.func = self.set_function()
         self.z_dim = z_dim
-        self.corruption = 0.15
 
     def init_model(self):
         return NetworkModel()
@@ -69,12 +68,6 @@ class NetworkIVExperiment(AbstractExperiment):
         z = np.random.uniform(low=-3, high=3, size=[n_sample, self.z_dim])
         t = np.reshape(z[:, 0], [-1, 1]) + e + gamma
         y = self.func(t) + e + delta
-
-        if self.ftype == 'corrupted_sin':
-            n_corrupted = int(n_sample * self.corruption)
-            print(n_corrupted, n_sample-n_corrupted)
-            y_corrupted = - np.exp(t) + e + delta
-            y = np.concatenate([y_corrupted[:n_corrupted], y[n_corrupted:]], axis=0)
         x = [t, y]
         return x, z
 
@@ -90,7 +83,7 @@ class NetworkIVExperiment(AbstractExperiment):
         if self.ftype == 'linear':
             def func(x):
                 return x
-        elif self.ftype == 'sin' or self.ftype == 'corrupted_sin':
+        elif self.ftype == 'sin':
             def func(x):
                 return np.sin(x)
         elif self.ftype == 'step':
@@ -128,12 +121,9 @@ if __name__ == '__main__':
     exp.setup_data(n_train=2000, n_val=2000, n_test=20000)
     model = exp.init_model()
 
-    f_optimizer_args = {"lr": 5 * 5e-4}
-    theta_optimizer_args = {"lr": 5e-4}
 
-    estimator = NeuralFGEL(model=model, divergence='chi2', max_num_epochs=5000,
-                           f_optim_args=f_optimizer_args, theta_optim_args=theta_optimizer_args)
-    # estimator = OrdinaryLeastSquares(model=model)
+    # estimator = NeuralFGEL(model=model, divergence='chi2', max_num_epochs=5000,)
+    estimator = OrdinaryLeastSquares(model=model)
     estimator.train(exp.x_train, exp.z_train, exp.x_val, exp.z_val, debugging=True)
     exp.show_function(model, exp.x_test)
 

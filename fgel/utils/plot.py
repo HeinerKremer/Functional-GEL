@@ -16,7 +16,11 @@ figsize = (LINE_WIDTH*1.4, LINE_WIDTH/2)
 labels = {'SMDIdentity': 'SMD',
           'SMDHeteroskedastic': 'SMD',
           'KernelFGEL-chi2': 'K-FGEL',
-          'NeuralFGEL': 'NN-FGEL',
+          'NeuralFGEL-chi2': 'NN-FGEL',
+          'KernelFGEL-log': 'K-FGEL',
+          'NeuralFGEL-log': 'NN-FGEL',
+          'KernelFGEL-kl': 'K-FGEL',
+          'NeuralFGEL-kl': 'NN-FGEL',
           'KernelMMR': 'MMR',
           'OrdinaryLeastSquares': 'LSQ',
           'KernelVMM': 'K-VMM',
@@ -96,10 +100,8 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
                 results[method]['mean'].append(res['mean_'+quantity])
                 results[method]['std'].append(res['std_'+quantity] / np.sqrt(res['n_runs']))
             else:
+                # FIXME: This is actually cheating, use val_mmr instead!
                 indeces = np.argsort(res['mse'])
-                print(np.sort(res['mse']))
-                print(indeces)
-                print(res['mse'])
                 best = np.asarray(res['mse'])[indeces]
                 best = best[:int(0.9 * len(best))]
                 print('Left out MSE: ', best[int(0.9 * len(best)):])
@@ -136,8 +138,8 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
 
 
 if __name__ == "__main__":
-    plot_results_over_sample_size(methods=['OrdinaryLeastSquares'],#, 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM'],
-                                  n_samples=[64, 128, 256, 512, 1024, 2048],#[50, 100, 200, 500, 1000, 2000],
+    plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM', 'NeuralFGEL-log', 'NeuralVMM'],
+                                  n_samples=[64, 128, 256, 512, 1024, 2048, 4096],#[50, 100, 200, 500, 1000, 2000],
                                   quantity='square_error',
                                   logscale=True,
-                                  remove_failed=True)
+                                  remove_failed=False)
