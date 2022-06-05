@@ -101,10 +101,10 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
                 results[method]['std'].append(res['std_'+quantity] / np.sqrt(res['n_runs']))
             else:
                 # FIXME: This is actually cheating, use val_mmr instead!
-                indeces = np.argsort(res['mse'])
+                indeces = np.argsort(res['val_mmr'])
                 best = np.asarray(res['mse'])[indeces]
-                best = best[:int(0.9 * len(best))]
-                print('Left out MSE: ', best[int(0.9 * len(best)):])
+                best = best[:int(0.95 * len(best))]
+                print('Left out MSE: ', best[int(0.95 * len(best)):])
                 results[method]['mean'].append(np.mean(best))
                 results[method]['std'].append(np.std(best) / np.sqrt(len(best)))
 
@@ -138,8 +138,9 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
 
 
 if __name__ == "__main__":
-    plot_results_over_sample_size(methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM', 'NeuralFGEL-log', 'NeuralVMM'],
-                                  n_samples=[64, 128, 256, 512, 1024, 2048, 4096],#[50, 100, 200, 500, 1000, 2000],
+    plot_results_over_sample_size(['OrdinaryLeastSquares', 'KernelMMR', 'KernelVMM', 'KernelFGEL-chi2'],
+        #methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM', 'NeuralFGEL-log', 'NeuralVMM'],
+                                  n_samples=[64, 128, 256, 512, 1024, 2048],#[50, 100, 200, 500, 1000, 2000],
                                   quantity='square_error',
                                   logscale=True,
                                   remove_failed=False)

@@ -82,6 +82,19 @@ for divergence in ['chi2', 'kl', 'log']:
         }
 
 for divergence in ['chi2', 'kl', 'log']:
+    methods[f'KernelFGEL-{divergence}-oadam'] = {
+        'estimator_class': KernelFGEL,
+        'estimator_kwargs': {
+            "divergence": divergence,
+            "batch_size": 200,
+            "max_num_epochs": 50000,
+            "burn_in_cycles": 5,
+            "eval_freq": 2000,
+            "max_no_improve": 3, },
+        'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8]}
+        }
+
+for divergence in ['chi2', 'kl', 'log']:
     methods[f'NeuralFGEL-{divergence}'] = {
         'estimator_class': NeuralFGEL,
         'estimator_kwargs': {
