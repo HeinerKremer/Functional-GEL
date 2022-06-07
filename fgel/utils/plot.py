@@ -15,6 +15,8 @@ figsize = (LINE_WIDTH*1.4, LINE_WIDTH/2)
 
 labels = {'SMDIdentity': 'SMD',
           'SMDHeteroskedastic': 'SMD',
+          'KernelFGEL': 'K-FGEL',
+          'NeuralFGEL': 'NN-FGEL',
           'KernelFGEL-chi2': 'K-FGEL',
           'NeuralFGEL-chi2': 'NN-FGEL',
           'KernelFGEL-log': 'K-FGEL',
@@ -82,7 +84,79 @@ NEURIPS_RCPARAMS = {
 }
 
 
-def plot_results_over_sample_size(methods, n_samples, quantity='square_error', logscale=False, divergence=None, remove_failed=False):
+def load_and_summarize_results(filename, validation_metric):
+    with open(filename, "r") as fp:
+        results = json.load(fp)
+
+    hypervals = []
+    train_risk = []
+    val_risk = []
+    test_risk = []
+    mse = []
+    params = []
+    val_mmr = []
+
+    for stats in results:
+        if len(stats['hyperparam']) > 1:
+            metric = stats[validation_metric]
+            metric = np.nan_to_num(metric, nan=np.inf)
+            i = np.argmin(metric)
+        else:
+            i = 0
+
+        hypervals.append(stats['hyperparam'][i])
+        train_risk.append(stats['train_risk'][i])
+        val_risk.append(stats['val_risk'][i])
+        test_risk.append(stats['test_risk'][i])
+        mse.append(stats['mse'][i])
+        params.append(stats['param'][i])
+        val_mmr.append(stats['val_mmr'][i])
+
+    results_summarized = {
+        "mean_square_error": np.mean(mse),
+        "std_square_error": np.std(mse),
+        "max_square_error": np.max(mse),
+        "mean_risk": np.mean(test_risk),
+        "std_risk": np.std(test_risk),
+        "max_risk": np.max(test_risk),
+        "mean_mmr_loss": np.mean(val_mmr),
+        "std_mmr_loss": np.std(val_mmr),
+        "n_runs": len(results),
+        "hyperparam_values": hypervals,
+        "train_risk": train_risk,
+        "val_risk": val_risk,
+        "test_risk": test_risk,
+        "mse": mse,
+        "val_mmr": val_mmr,
+        "params": params,
+    }
+    return results_summarized
+
+
+def get_result_for_best_divergence(method, n_train, validation_metric):
+    mses = []
+    validation = []
+    for divergence in ['chi2', 'kl', 'log']:
+        filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}-{divergence}_n={n_train}.json"
+        res = load_and_summarize_results(filename, validation_metric)
+        mses.append(res['mse'])
+        validation.append(res[validation_metric])
+    indices = np.argmin(np.asarray(mses), axis=0)
+    validation_metrics = np.min(np.asarray(validation), axis=0)
+    mses = np.asarray(mses)
+    mses = np.asarray([mses[index][i] for i, index in enumerate(indices)])
+    return mses, validation_metrics
+
+
+def remove_failed_runs(mses, mmrs):
+    indeces = np.argsort(mmrs)
+    best = np.asarray(mses)[indeces]
+    best_mses = best[:int(0.95 * len(best))]
+    print('Left out MSE: ', best[int(0.95 * len(best)):])
+    return best_mses
+
+
+def plot_results_over_sample_size(methods, n_samples, validation_metric='mmr', logscale=False, remove_failed=False):
     plt.rcParams.update(NEURIPS_RCPARAMS)
     sns.set_theme()
 
@@ -93,20 +167,17 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
     n_samples = np.sort(n_samples)
     for n_train in n_samples:
         for method in methods:
-            filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}_n={n_train}.json"
-            with open(filename, "r") as fp:
-                res = json.load(fp)
-            if not remove_failed:
-                results[method]['mean'].append(res['mean_'+quantity])
-                results[method]['std'].append(res['std_'+quantity] / np.sqrt(res['n_runs']))
+            if method in ['NeuralFGEL', 'KernelFGEL']:
+                mses, mmrs = get_result_for_best_divergence(method, n_train, validation_metric)
             else:
-                # FIXME: This is actually cheating, use val_mmr instead!
-                indeces = np.argsort(res['val_mmr'])
-                best = np.asarray(res['mse'])[indeces]
-                best = best[:int(0.95 * len(best))]
-                print('Left out MSE: ', best[int(0.95 * len(best)):])
-                results[method]['mean'].append(np.mean(best))
-                results[method]['std'].append(np.std(best) / np.sqrt(len(best)))
+                filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}_n={n_train}.json"
+                res = load_and_summarize_results(filename, validation_metric)
+                mses, mmrs = res['mse'], res['val_mmr']
+            if remove_failed:
+                mses = remove_failed_runs(mses, mmrs)
+
+            results[method]['mean'].append(np.mean(mses))
+            results[method]['std'].append(np.std(mses) / np.sqrt(len(mses)))
 
     n_plots = 1
     # figsize = (LINE_WIDTH, LINE_WIDTH / 2)
@@ -129,7 +200,74 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
         ax[0].set_xscale('log')
         ax[0].set_yscale('log')
     #ax[0].set_xlim([1e2, 1e4])
-    ax[0].set_ylim([1e-4, 1e0])
+    # ax[0].set_ylim([1e-4, 1e0])
+
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('results/HeteroskedasticNoisePlot.pdf', dpi=200)
+    plt.show()
+
+
+def plot_divergence_comparison(n_samples, quantity='square_error', logscale=False, remove_failed=False):
+    plt.rcParams.update(NEURIPS_RCPARAMS)
+    sns.set_theme()
+    marker = ['v', 'o', 's', 'd', 'p', '*', 'h']
+    colors = ['tab:blue', 'tab:red', 'tab:orange', 'tab:olive', 'tab:pink', 'tab:cyan', 'tab:purple']
+
+    figsize = (LINE_WIDTH/1.3, LINE_WIDTH / 1.8)
+    fig, ax = plt.subplots(2, 1, figsize=figsize)
+
+    for k, version in enumerate(['Neural', 'Kernel']):
+        methods = [f'{version}FGEL-chi2', f'{version}FGEL-kl', f'{version}FGEL-log']
+        results = {method: {'mean': [], 'std': []} for method in methods}
+
+        n_samples = np.sort(n_samples)
+        for n_train in n_samples:
+            for method in methods:
+                filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}_n={n_train}.json"
+                with open(filename, "r") as fp:
+                    res = json.load(fp)
+                if not remove_failed:
+                    mean = np.mean(res['mse'])
+                    std = np.std(res['mse'])
+                    try:
+                        filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}-oadam_n={n_train}.json"
+                        with open(filename, "r") as fp:
+                            res2 = json.load(fp)
+                            mean2 = np.mean(res2['mse'])
+                            std2 = np.std(res2['mse'])
+                            print('OAdam version of KFGEL worked better!')
+                    except FileNotFoundError:
+                        mean2 = np.inf
+
+                    mean = min(mean, mean2)
+                    std = std if mean < mean2 else std2
+
+                    results[method]['mean'].append(mean)
+                    results[method]['std'].append(std / np.sqrt(res['n_runs']))
+                else:
+                    indeces = np.argsort(res['val_mmr'])
+                    best = np.asarray(res['mse'])[indeces]
+                    best = best[:int(0.95 * len(best))]
+                    print('Left out MSE: ', best[int(0.95 * len(best)):])
+                    results[method]['mean'].append(np.mean(best))
+                    results[method]['std'].append(np.std(best) / np.sqrt(len(best)))
+
+        for i, (method, res) in enumerate(results.items()):
+            ax[k].plot(n_samples, res['mean'], label=labels[method], color=colors[i], marker=marker[i], ms=10)
+            ax[k].fill_between(n_samples,
+                            np.subtract(res['mean'], res['std']),
+                            np.add(res['mean'], res['std']),
+                            alpha=0.2,
+                            color=colors[i])
+
+        ax[k].set_xlabel('sample size')
+        ax[k].set_ylabel(r'$||\theta - \theta_0 ||^2$')
+        if logscale:
+            ax[k].set_xscale('log')
+            ax[k].set_yscale('log')
+        #ax[0].set_xlim([1e2, 1e4])
+        ax[k].set_ylim([1e-4, 1e0])
 
     plt.legend()
     plt.tight_layout()
@@ -138,9 +276,9 @@ def plot_results_over_sample_size(methods, n_samples, quantity='square_error', l
 
 
 if __name__ == "__main__":
-    plot_results_over_sample_size(['OrdinaryLeastSquares', 'KernelMMR', 'KernelVMM', 'KernelFGEL-chi2'],
+    plot_results_over_sample_size(['KernelFGEL-log', 'KernelVMM'], # 'OrdinaryLeastSquares', 'KernelMMR', 'KernelVMM', 'KernelFGEL'],
         #methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM', 'NeuralFGEL-log', 'NeuralVMM'],
-                                  n_samples=[64, 128, 256, 512, 1024, 2048],#[50, 100, 200, 500, 1000, 2000],
-                                  quantity='square_error',
+                                  n_samples=[64, 128, 256, 512, 1024],#[50, 100, 200, 500, 1000, 2000],
+                                  validation_metric='val_risk',
                                   logscale=True,
                                   remove_failed=False)

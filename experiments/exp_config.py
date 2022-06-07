@@ -28,33 +28,33 @@ experiments = {
 }
 
 methods = {
-    # 'OrdinaryLeastSquares':
-    #     {
-    #         'estimator_class': OrdinaryLeastSquares,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {},
-    #     },
-    #
-    # 'KernelMMR':
-    #     {
-    #         'estimator_class': KernelMMR,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {},
-    #     },
-    #
-    # 'SieveMinimumDistance':
-    #     {
-    #         'estimator_class': SMDHeteroskedastic,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {}
-    #     },
-    #
-    # 'KernelVMM':
-    #     {
-    #         'estimator_class': KernelVMM,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {'alpha': [1e-8, 1e-6, 1e-4]}
-    #     },
+    'OrdinaryLeastSquares':
+        {
+            'estimator_class': OrdinaryLeastSquares,
+            'estimator_kwargs': {},
+            'hyperparams': {},
+        },
+
+    'KernelMMR':
+        {
+            'estimator_class': KernelMMR,
+            'estimator_kwargs': {},
+            'hyperparams': {},
+        },
+
+    'SieveMinimumDistance':
+        {
+            'estimator_class': SMDHeteroskedastic,
+            'estimator_kwargs': {},
+            'hyperparams': {}
+        },
+
+    'KernelVMM':
+        {
+            'estimator_class': KernelVMM,
+            'estimator_kwargs': {},
+            'hyperparams': {'alpha': [1e-8, 1e-6, 1e-4]}
+        },
 
     'NeuralVMM':
         {
