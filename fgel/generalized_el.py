@@ -297,7 +297,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             eval_freq_epochs = self.eval_freq
 
         self._init_training(x_tensor, z_tensor)
-        loss = []
+        # loss = []
         mmr = []
 
         min_val_loss = float("inf")
@@ -313,10 +313,10 @@ class GeneralizedEL(AbstractEstimationMethod):
                     x_batch = [x_tensor[0][batch_idx], x_tensor[1][batch_idx]]
                     z_batch = z_tensor[batch_idx]
                     obj = self.optimize_step(x_batch, z_batch)
-                    loss.append(obj)
+                    # loss.append(obj)
             else:
                 obj = self.optimize_step(x_tensor, z_tensor)
-                loss.append(obj)
+                # loss.append(obj)
 
             if epoch_i % eval_freq_epochs == 0:
                 cycle_num += 1
