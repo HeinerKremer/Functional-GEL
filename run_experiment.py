@@ -51,11 +51,6 @@ def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_k
         test_risks.append(float(exp.eval_test_risk(model, exp.x_test)))
         mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
         val_mmr.append(float(estimator._calc_val_mmr(exp.x_val, exp.z_val).detach().numpy()))
-    # if validation_metric == 'mmr' and len(models) > 1:
-    #     val_mmr = np.nan_to_num(val_mmr, nan=np.inf)
-    #     i = np.argmin(val_mmr)
-    # else:
-    #     i = 0
     stats = {'hyperparam': hypervals,
              'param': params,
              'train_risk': train_risks,
@@ -91,6 +86,8 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
             divergence = ""
         prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={str(estimator_class.__name__)}{divergence}_n={n_train}"
         os.makedirs(os.path.dirname(prefix), exist_ok=True)
+        print(filename)
+        print(prefix + str(filename) + ".json")
         with open(prefix + filename + ".json", "w") as fp:
             json.dump(results, fp)
     return results
@@ -112,7 +109,7 @@ def run_parallel(experiment, exp_params, n_train, estimator_class, estimator_kwa
     return results
 
 
-def run_all(experiment, repititions, method=None):
+def run_all(experiment, repititions, method=None, filename=None):
     """
     Runs all methods for all sample sizes `n_train_list` sequentially `repititions` times. This can be used if one has
     only access to a single machine instead of a computer cluster. Might take a long time to finish.
@@ -134,7 +131,7 @@ def run_all(experiment, repititions, method=None):
                                     estimator_kwargs=estimator_info['estimator_kwargs'],
                                     hyperparams=estimator_info['hyperparams'],
                                     repititions=repititions,
-                                    filename='')
+                                    filename=filename)
 
 
 if __name__ == "__main__":
@@ -144,19 +141,24 @@ if __name__ == "__main__":
     parser.add_argument('--run_all', action='store_true')
     parser.add_argument('--run_sequential', action='store_true')
     parser.add_argument('--experiment', type=str, default='heteroskedastic')
-    # parser.add_argument('--experiment_args', default=)
+    parser.add_argument('--exp_option', default=None)
     parser.add_argument('--n_train', type=int, default=100)
     parser.add_argument('--method', type=str, default='OrdinaryLeastSquares')
     parser.add_argument('--rollouts', type=int, default=2)
-    parser.add_argument('--filename', type=str, default='')
 
     args = parser.parse_args()
 
     estimator_info = methods[args.method]
     exp_info = experiments[args.experiment]
 
+    if args.exp_option is not None:
+        exp_info['exp_params'] = {list(exp_info['exp_params'].keys())[0]: args.exp_option}
+        filename = '_' + args.exp_option
+    else:
+        filename = ''
+
     if args.run_all:
-        run_all(args.experiment, args.rollouts, args.method)
+        run_all(args.experiment, args.rollouts, args.method, filename)
     else:
         results = run_experiment_repeated(experiment=exp_info['exp_class'],
                                           exp_params=exp_info['exp_params'],
@@ -166,5 +168,5 @@ if __name__ == "__main__":
                                           hyperparams=estimator_info['hyperparams'],
                                           repititions=args.rollouts,
                                           parallel=not args.run_sequential,
-                                          filename=args.filename)
+                                          filename=filename)
         print(results)

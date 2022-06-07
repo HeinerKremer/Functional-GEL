@@ -11,6 +11,11 @@ experiments = [
     ('heteroskedastic', {'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
                          'method': [name for name in methods.keys()],
                          'rollouts': [55],}
+     ),
+    ('network_iv', {'n_train': [2000],
+                    'method': [name for name in methods.keys()],
+                    'rollouts': [55],
+                    'exp_option': ['abs', 'step', 'sin', 'linear']}
      )
 ]
 

@@ -23,8 +23,9 @@ experiments = {
     'network_iv':
         {
             'exp_class': NetworkIVExperiment,
-
-        }
+            'exp_params': {'ftype': None},
+            'n_train': [200],
+        },
 }
 
 methods = {

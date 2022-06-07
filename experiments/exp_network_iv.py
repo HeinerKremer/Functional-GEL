@@ -48,6 +48,9 @@ class NetworkModel(nn.Module):
         isfinite = np.sum(np.isfinite(self.get_parameters()))
         return (not isnan) and isfinite
 
+    def get_parameters(self):
+        return 0
+
 
 class NetworkIVExperiment(AbstractExperiment):
     def __init__(self, ftype='sin'):
@@ -58,6 +61,9 @@ class NetworkIVExperiment(AbstractExperiment):
 
     def init_model(self):
         return NetworkModel()
+
+    def get_true_parameters(self):
+        return 0
 
     def generate_data(self, n_sample, split=None):
         """Generates train, validation and test data"""
