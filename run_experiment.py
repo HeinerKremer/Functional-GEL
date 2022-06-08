@@ -84,7 +84,11 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
             divergence = f'-{estimator_kwargs["divergence"]}'
         else:
             divergence = ""
-        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={str(estimator_class.__name__)}{divergence}_n={n_train}"
+        if str(estimator_class.__name__) == 'KernelFGEL':
+            optim = f'-{estimator_kwargs["theta_optim"]}'
+        else:
+            optim = ''
+        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={str(estimator_class.__name__)}{divergence}{optim}_n={n_train}"
         os.makedirs(os.path.dirname(prefix), exist_ok=True)
         print(filename)
         print(prefix + str(filename) + ".json")

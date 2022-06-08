@@ -135,11 +135,18 @@ def load_and_summarize_results(filename, validation_metric):
     return results_summarized
 
 
-def get_result_for_best_divergence(method, n_train, test_metric, validation_metric):
+def get_result_for_best_divergence(method, n_train, test_metric, validation_metric, func=None):
+    if func is not None:
+        opt = f'_{func}'
+        experiment = 'results/NetworkIVExperiment/NetworkIVExperiment'
+    else:
+        opt = ''
+        experiment = 'results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment'
+
     test_metrics = []
     validation = []
     for divergence in ['chi2', 'kl', 'log']:
-        filename = f"results/HeteroskedasticNoiseExperiment/HeteroskedasticNoiseExperiment_method={method}-{divergence}_n={n_train}.json"
+        filename = f"{experiment}_method={method}-{divergence}_n={n_train}{opt}.json"
         res = load_and_summarize_results(filename, validation_metric)
         test_metrics.append(res[test_metric])
         validation.append(res[validation_metric])
@@ -170,11 +177,11 @@ def get_result_for_best_optimizer(method, n_train, validation_metric):
     #     std = std if mean < mean2 else std2
 
 
-def remove_failed_runs(mses, mmrs):
+def remove_failed_runs(mses, mmrs, proportion=0.9):
     indeces = np.argsort(mmrs)
     best = np.asarray(mses)[indeces]
-    best_mses = best[:int(0.95 * len(best))]
-    print('Left out MSE: ', best[int(0.95 * len(best)):])
+    best_mses = best[:int(proportion * len(best))]
+    print('Left out MSE: ', best[int(proportion * len(best)):])
     return best_mses
 
 
@@ -241,7 +248,7 @@ def plot_divergence_comparison(n_samples, validation_metric, logscale=False, rem
 
     labels = [rf'$\chi^2$', 'KL', 'Log']
 
-    for k, version in enumerate(['Kernel', 'Kernel']):
+    for k, version in enumerate(['Kernel', 'Neural']):
         methods = [f'{version}FGEL-chi2', f'{version}FGEL-kl', f'{version}FGEL-log']
         results = {method: {'mean': [], 'std': []} for method in methods}
 
@@ -265,7 +272,7 @@ def plot_divergence_comparison(n_samples, validation_metric, logscale=False, rem
                             alpha=0.2,
                             color=colors[i])
 
-        ax[0].set_xlabel('sample size')
+        ax[1].set_xlabel('sample size')
         ax[k].set_ylabel(r'$||\theta - \theta_0 ||^2$')
         if logscale:
             ax[k].set_xscale('log')
@@ -281,15 +288,15 @@ def plot_divergence_comparison(n_samples, validation_metric, logscale=False, rem
 
 
 def generate_table(n_train, test_metric='test_risk', validation_metric='val_mmr', remove_failed=False):
-    methods = ['NonCausalBaseline',
+    methods = ['OrdinaryLeastSquares',
                'SMDHeteroskedastic',
                'KernelMMR',
-               'KernelVMM'
+               'KernelVMM',
                'NeuralVMM',
                'KernelFGEL',
                'NeuralFGEL',
                ]
-    methods = ['KernelFGEL-chi2']
+    # methods = ['KernelFGEL-chi2']
 
     funcs = ['abs', 'step', 'sin', 'linear']
 
@@ -297,7 +304,7 @@ def generate_table(n_train, test_metric='test_risk', validation_metric='val_mmr'
     for func in funcs:
         for method in methods:
             if method in ['NeuralFGEL', 'KernelFGEL']:
-                test, val = get_result_for_best_divergence(method, n_train, test_metric, validation_metric)
+                test, val = get_result_for_best_divergence(method, n_train, test_metric, validation_metric, func)
             else:
                 filename = f"results/NetworkIVExperiment/NetworkIVExperiment_method={method}_n={n_train}_{func}.json"
                 res = load_and_summarize_results(filename, validation_metric)
@@ -318,19 +325,19 @@ def generate_table(n_train, test_metric='test_risk', validation_metric='val_mmr'
 
 
 if __name__ == "__main__":
-    # plot_results_over_sample_size(['OrdinaryLeastSquares', 'KernelMMR', 'KernelFGEL', 'KernelVMM'], # 'OrdinaryLeastSquares', 'KernelMMR', 'KernelVMM', 'KernelFGEL'],
-    #     # methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM', 'NeuralFGEL-log', 'NeuralVMM'],
-    #                               n_samples=[64, 128, 512, 1024],   # [50, 100, 200, 500, 1000, 2000],
-    #                               validation_metric='val_risk',
-    #                               logscale=True,
-    #                               remove_failed=False)
-    #
-    # plot_divergence_comparison(n_samples=[64, 128, 512, 1024],
-    #                            validation_metric='val_risk',
-    #                            logscale=True,
-    #                            remove_failed=False,
-    #                            )
+    plot_results_over_sample_size(['OrdinaryLeastSquares', 'SMDHeteroskedastic', 'KernelMMR', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'NeuralFGEL'], # 'OrdinaryLeastSquares', 'KernelMMR', 'KernelVMM', 'KernelFGEL'],
+        # methods=['OrdinaryLeastSquares', 'KernelMMR', 'SMDHeteroskedastic', 'KernelFGEL-chi2', 'KernelVMM', 'NeuralFGEL-log', 'NeuralVMM'],
+                                  n_samples=[64, 128, 256, 512, 1024, 2048, 4096],   # [50, 100, 200, 500, 1000, 2000],
+                                  validation_metric='val_risk',
+                                  logscale=True,
+                                  remove_failed=True)
 
-    generate_table(n_train=200,
+    plot_divergence_comparison(n_samples=[64, 128, 256, 512, 1024, 2048, 4096],
+                               validation_metric='val_risk',
+                               logscale=True,
+                               remove_failed=True,
+                               )
+
+    generate_table(n_train=2000,
                    test_metric='test_risk',
                    validation_metric='val_mmr')
