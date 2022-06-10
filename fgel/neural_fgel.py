@@ -2,7 +2,7 @@ import torch
 
 from fgel.baselines.least_squares import OrdinaryLeastSquares
 from fgel.generalized_el import GeneralizedEL
-from fgel.utils.torch_utils import ModularMLPModel
+from fgel.utils.torch_utils import ModularMLPModel, Parameter
 
 
 class NeuralFGEL(GeneralizedEL):
@@ -18,6 +18,8 @@ class NeuralFGEL(GeneralizedEL):
 
     def _init_dual_func(self):
         self.dual_func = ModularMLPModel(**self.dual_func_network_kwargs)
+        self.dual_normalization = Parameter(shape=(1, 1))
+        self.dual_normalization.params = torch.nn.Parameter(torch.zeros(size=(1, 1), dtype=torch.float32), requires_grad=True)
 
     def _update_default_dual_func_network_kwargs(self, dual_func_network_kwargs):
         dual_func_network_kwargs_default = {
@@ -30,15 +32,25 @@ class NeuralFGEL(GeneralizedEL):
             dual_func_network_kwargs_default.update(dual_func_network_kwargs)
         return dual_func_network_kwargs_default
 
+    # def objective(self, x, z, *args):
+    #     hz = self.dual_func(z)
+    #     h_psi = torch.einsum('ik, ik -> i', hz, self.model.psi(x))
+    #     moment = torch.mean(self.gel_function(h_psi))
+    #     if self.l2_lambda > 0:
+    #         l_reg = self.l2_lambda * torch.mean(hz ** 2)
+    #     else:
+    #         l_reg = 0
+    #     return moment, -moment + l_reg
+
     def objective(self, x, z, *args):
         hz = self.dual_func(z)
         h_psi = torch.einsum('ik, ik -> i', hz, self.model.psi(x))
-        moment = torch.mean(self.gel_function(h_psi))
+        moment = torch.mean(self.gel_function(h_psi + self.dual_normalization.params))
         if self.l2_lambda > 0:
             l_reg = self.l2_lambda * torch.mean(hz ** 2)
         else:
             l_reg = 0
-        return moment, -moment + l_reg
+        return moment, -moment + l_reg - self.dual_normalization.params
 
 
 if __name__ == '__main__':

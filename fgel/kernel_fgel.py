@@ -17,22 +17,24 @@ class KernelFGEL(GeneralizedEL):
     def _init_dual_func(self):
         self.dual_func = Parameter(shape=(self.kernel_z.shape[0], self.psi_dim))
         self.dual_normalization = Parameter(shape=(1, 1))
+        self.params = torch.nn.Parameter(torch.zeros(size=(1, 1), dtype=torch.float32), requires_grad=True)
+
 
     def get_rkhs_norm(self):
         return torch.einsum('ir, ij, jr ->', self.dual_func.params, self.kernel_z, self.dual_func.params)
 
-    def objective(self, x, z, *args, **kwargs):
-        dual_func_k_psi = torch.einsum('jr, ji, ir -> i', self.dual_func.params, self.kernel_z, self.model.psi(x))
-        objective = torch.mean(self.gel_function(dual_func_k_psi))
-        regularizer = self.reg_param/2 * torch.sqrt(self.get_rkhs_norm())
-        return objective, - objective + regularizer
-    #
     # def objective(self, x, z, *args, **kwargs):
     #     dual_func_k_psi = torch.einsum('jr, ji, ir -> i', self.dual_func.params, self.kernel_z, self.model.psi(x))
-    #     objective = torch.mean(self.gel_function(torch.squeeze(self.dual_normalization.params) + dual_func_k_psi))
+    #     objective = torch.mean(self.gel_function(dual_func_k_psi))
     #     regularizer = self.reg_param/2 * torch.sqrt(self.get_rkhs_norm())
-    #     # print(self.dual_normalization.params.detach().numpy(), (- objective + regularizer).detach().numpy())
-    #     return objective, self.dual_normalization.params - objective + regularizer
+    #     return objective, - objective + regularizer
+
+    def objective(self, x, z, *args, **kwargs):
+        dual_func_k_psi = torch.einsum('jr, ji, ir -> i', self.dual_func.params, self.kernel_z, self.model.psi(x))
+        objective = torch.mean(self.gel_function(torch.squeeze(self.dual_normalization.params) + dual_func_k_psi))
+        regularizer = self.reg_param/2 * torch.sqrt(self.get_rkhs_norm())
+        # print(self.dual_normalization.params.detach().numpy(), (- objective + regularizer).detach().numpy())
+        return objective, - objective + regularizer - self.dual_normalization.params
 
     def _optimize_dual_func_cvxpy(self, x_tensor, z_tensor):
         """CVXPY dual_func optimization for kernelized objective"""
