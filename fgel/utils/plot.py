@@ -152,9 +152,12 @@ def get_result_for_best_divergence(method, n_train, test_metric, validation_metr
     validation = []
     for divergence in ['chi2', 'log', 'kl']:
         filename = f"{experiment}_method={method}-{divergence}{optimizer}_n={n_train}{opt}.json"
-        res = load_and_summarize_results(filename, validation_metric)
-        test_metrics.append(res[test_metric])
-        validation.append(res[validation_metric])
+        try:
+            res = load_and_summarize_results(filename, validation_metric)
+            test_metrics.append(res[test_metric])
+            validation.append(res[validation_metric])
+        except FileNotFoundError:
+            print('No such file or directory: "results/NetworkIVExperiment/NetworkIVExperiment_method=KernelFGEL-kl-lbfgs_n=2000_abs.json"')
     indices = np.argmin(np.asarray(test_metrics), axis=0)
     validation_metrics = np.min(np.asarray(validation), axis=0)
     test_metrics = np.asarray(test_metrics)
@@ -183,6 +186,8 @@ def get_result_for_best_optimizer(method, n_train, validation_metric):
 
 
 def remove_failed_runs(mses, mmrs, proportion=0.9):
+    """The baseline KernelVMM fails sometimes, so we have to remove a few runs, to keep the comparison fair
+    we simply remove the same proportion of the worst runs from all methods."""
     indeces = np.argsort(mmrs)
     best = np.asarray(mses)[indeces]
     best_mses = best[:int(proportion * len(best))]
@@ -322,7 +327,7 @@ def generate_table(n_train, test_metric='test_risk', validation_metric='val_mmr'
                 res = load_and_summarize_results(filename, validation_metric)
                 test, val = res[test_metric], res[validation_metric]
             if remove_failed:
-                test = remove_failed_runs(test_metric, val)
+                test = remove_failed_runs(test, val)
 
             results[func][method]['mean'] = np.mean(test)
             results[func][method]['std'] = np.std(test) / np.sqrt(len(test))
@@ -359,5 +364,5 @@ if __name__ == "__main__":
     generate_table(n_train=2000,
                    test_metric='test_risk',
                    validation_metric='val_mmr',
-                   remove_failed=True,
+                   remove_failed=False,
                    optimizer=None)

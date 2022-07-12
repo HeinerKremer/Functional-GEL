@@ -29,45 +29,45 @@ experiments = {
 }
 
 methods = {
-    # 'OrdinaryLeastSquares':
-    #     {
-    #         'estimator_class': OrdinaryLeastSquares,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {},
-    #     },
-    #
-    # 'KernelMMR':
-    #     {
-    #         'estimator_class': KernelMMR,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {},
-    #     },
-    #
-    # 'SieveMinimumDistance':
-    #     {
-    #         'estimator_class': SMDHeteroskedastic,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {}
-    #     },
-    #
-    # 'KernelVMM':
-    #     {
-    #         'estimator_class': KernelVMM,
-    #         'estimator_kwargs': {},
-    #         'hyperparams': {'alpha': [1e-8, 1e-6, 1e-4]}
-    #     },
-    #
-    # 'NeuralVMM':
-    #     {
-    #         'estimator_class': NeuralVMM,
-    #         'estimator_kwargs': {"batch_size": 200,
-    #                              "max_num_epochs": 20000,
-    #                              "burn_in_cycles": 5,
-    #                              "eval_freq": 100,
-    #                              "max_no_improve": 3,
-    #                              },
-    #         'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
-    #     },
+    'OrdinaryLeastSquares':
+        {
+            'estimator_class': OrdinaryLeastSquares,
+            'estimator_kwargs': {},
+            'hyperparams': {},
+        },
+
+    'KernelMMR':
+        {
+            'estimator_class': KernelMMR,
+            'estimator_kwargs': {},
+            'hyperparams': {},
+        },
+
+    'SieveMinimumDistance':
+        {
+            'estimator_class': SMDHeteroskedastic,
+            'estimator_kwargs': {},
+            'hyperparams': {}
+        },
+
+    'KernelVMM':
+        {
+            'estimator_class': KernelVMM,
+            'estimator_kwargs': {},
+            'hyperparams': {'alpha': [1e-8, 1e-6, 1e-4]}
+        },
+
+    'NeuralVMM':
+        {
+            'estimator_class': NeuralVMM,
+            'estimator_kwargs': {"batch_size": 200,
+                                 "max_num_epochs": 20000,
+                                 "burn_in_cycles": 5,
+                                 "eval_freq": 100,
+                                 "max_no_improve": 3,
+                                 },
+            'hyperparams': {"l2_lambda": [0, 1e-4, 1e-2, 1e0]}
+        },
 }
 
 for divergence in ['chi2', 'kl', 'log']:
