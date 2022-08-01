@@ -13,26 +13,57 @@ source fgel-venv/bin/activate
 pip install -e .
 ```
 
-## Syntax
-The syntax used to train FGEL estimators is described below. Applying the method to a problem at hand requires phrasing the problem
-as a class inheriting from the [AbstractExperiment](experiments/abstract_experiment.py) class, 
-refer to [exp_heteroskedastic.py](experiments/exp_heteroskedastic.py) for an example.
+## Using FGEL
+FGEL estimators can be trained following the below syntax. The code can also be found in the notebook [example.ipynb](https://github.com/HeinerKremer/Functional-GEL/blob/main/example.ipynb).
 ```python
-from fgel.kernel_fgel import KernelFGEL
-from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
+import torch
+import numpy as np
+from fgel.estimation import fgel_estimation
 
-# Initialize model and data
-exp = HeteroskedasticNoiseExperiment(theta=1.7)
-exp.setup_data(n_train=200, n_val=200, n_test=20000)
-model = exp.init_model()
 
-# Train FGEL estimator
-estimator = KernelFGEL(model=model, reg_param=1e-7)
-estimator.train(x_train=exp.x_train, z_train=exp.z_train, x_val=exp.x_val, z_val=exp.z_val)
+# Generate some data
+def generate_data(n_sample):
+    e = np.random.normal(loc=0, scale=1.0, size=[n_sample, 1])
+    gamma = np.random.normal(loc=0, scale=0.1, size=[n_sample, 1])
+    delta = np.random.normal(loc=0, scale=0.1, size=[n_sample, 1])
+
+    z = np.random.uniform(low=-3, high=3, size=[n_sample, 1])
+    t = np.reshape(z[:, 0], [-1, 1]) + e + gamma
+    y = np.abs(t) + e + delta
+    return {'t': t, 'y': y, 'z': z}
+
+train_data = generate_data(n_sample=100)
+validation_data = generate_data(n_sample=100)
+test_data = generate_data(n_sample=10000)
+
+
+# Define a PyTorch model $f$ and a moment function $\psi$
+model = torch.nn.Sequential(
+            torch.nn.Linear(1, 20),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(20, 3),
+            torch.nn.LeakyReLU(),
+            torch.nn.Linear(3, 1)
+        )
+
+def moment_function(model_evaluation, y):
+    return model_evaluation - y
+
+# Train the model using Kernel/Neural-FGEL
+trained_model, stats = fgel_estimation(model=model,                     # Use any PyTorch model
+                                       train_data=train_data,           # Format {'t': t, 'y': y, 'z': z}
+                                       moment_function=moment_function, # moment_function(model_eval, y) -> (n_sample, dim_y)
+                                       version='kernel',                # 'kernel' or 'neural' FGEL version
+                                       divergence=None,                 # If 'None' optimize as hyperparam, otherwise choose from ['chi2', 'kl', 'log']
+                                       reg_param=None,                  # If 'None' optimize as hyperparam
+                                       validation_data=validation_data, # Format {'t': t, 'y': y, 'z': z}
+                                       val_loss_func=None,              # Custom validation loss: val_loss_func(model, validation_data) -> float
+                                       verbose=True)
 
 # Make prediction
-y_pred = model(exp.x_test[0])
+y_pred = trained_model(test_data['t'])
 ```
+
 
 [comment]: <> (## Reproducibility)
 

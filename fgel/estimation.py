@@ -7,7 +7,7 @@ import torch.nn as nn
 from experiments.exp_config import methods
 
 
-def fgel_iv_estimation(model, train_data, version='kernel', divergence=None, reg_param=None,
+def fgel_estimation(model, train_data, moment_function, version='kernel', divergence=None, reg_param=None,
                        validation_data=None, val_loss_func=None, verbose=True):
     x_train = [train_data['t'], train_data['y']]
     z_train = train_data['z']
@@ -47,7 +47,9 @@ def fgel_iv_estimation(model, train_data, version='kernel', divergence=None, reg
 
         for hval in list(hyperparams.values())[0]:
             hyper = {hyper_param_name: hval}
-            model_wrapper = IVModelWrapper(model=copy.deepcopy(model), dim_y=x_train[1].shape[1], dim_z=z_train.shape[1])
+            model_wrapper = ModelWrapper(model=copy.deepcopy(model),
+                                         moment_function=moment_function,
+                                         dim_y=x_train[1].shape[1], dim_z=z_train.shape[1])
             if verbose:
                 print('Running: ', f'divergence={divergence}, reg_param={hval}')
             estimator = estimator_class(model=model_wrapper, **hyper, **estimator_kwargs)
@@ -67,16 +69,28 @@ def fgel_iv_estimation(model, train_data, version='kernel', divergence=None, reg
     return models[best_val], {'models': models, 'val_loss': validation_loss, 'params': params, 'best_params': best_params}
 
 
-class IVModelWrapper(nn.Module):
-    def __init__(self, model, dim_y, dim_z):
+def fgel_iv_estimation(model, train_data, version='kernel', divergence=None, reg_param=None,
+                       validation_data=None, val_loss_func=None, verbose=True):
+
+    def moment_function(model_evaluation, y):
+        return model_evaluation - y
+
+    return fgel_estimation(model=model, train_data=train_data, moment_function=moment_function,
+                           version=version, divergence=divergence, reg_param=reg_param,
+                           validation_data=validation_data, val_loss_func=val_loss_func, verbose=verbose)
+
+
+class ModelWrapper(nn.Module):
+    def __init__(self, model, moment_function, dim_y, dim_z):
         nn.Module.__init__(self)
         self.model = model
+        self.moment_function = moment_function
         self.psi_dim = dim_y
         self.dim_z = dim_z
 
     def psi(self, data):
         t, y = torch.Tensor(data[0]), torch.Tensor(data[1])
-        return self.model(t) - y
+        return self.moment_function(self.model(t), y)
 
     def get_parameters(self):
         param_tensor = self.model.parameters().data
