@@ -13,14 +13,21 @@ cvx_solver = cvx.MOSEK
 
 
 class GeneralizedEL(AbstractEstimationMethod):
+    """
+    The standard f-divergence based generalized empirical likelihood estimator of Owen and Qin and Lawless for
+    unconditional moment restrictions. This is the base class that all GEL-based estimators inherit from.
+    Optimization procedures and general functionalities should be implemented here. The child classes should usually only
+    override the `objective`, `_init_dual_func`, `_init_training` methods and include methods for computing specific
+    quantities (and if desired a cvxpy optimization method for the optimization over the dual functions).
+    """
 
     def __init__(self, model,
                  max_num_epochs=50000, eval_freq=2000, max_no_improve=3, burn_in_cycles=5,
                  theta_optim=None, theta_optim_args=None, pretrain=True,
                  dual_optim=None, dual_optim_args=None, inneriters=None,
-                 divergence=None, kernel_args=None,
+                 divergence=None, kernel_z_kwargs=None,
                  verbose=False):
-        super().__init__(model=model, kernel_args=kernel_args)
+        super().__init__(model=model, kernel_z_kwargs=kernel_z_kwargs)
 
         if theta_optim_args is None:
             theta_optim_args = {"lr": 5e-4}
@@ -269,7 +276,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             return loss_dual_func
 
     def _init_training(self, x_tensor, z_tensor, z_val_tensor=None):
-        self._set_kernel(z_tensor, z_val_tensor)
+        self._set_kernel_z(z_tensor, z_val_tensor)
         self._init_dual_func()
         self._set_optimizers()
         if self.pretrain:
@@ -277,12 +284,16 @@ class GeneralizedEL(AbstractEstimationMethod):
 
     def _train_internal(self, x_train, z_train, x_val, z_val, debugging):
         x_tensor = self._to_tensor(x_train)
-        z_tensor = self._to_tensor(z_train)
         x_val_tensor = self._to_tensor(x_val)
-        z_val_tensor = self._to_tensor(z_val)
+
+        if z_train is not None:
+            z_tensor = self._to_tensor(z_train)
+            z_val_tensor = self._to_tensor(z_val)
+        else:
+            z_tensor, z_val_tensor = None, None
 
         if self.batch_training:
-            n = z_train.shape[0]
+            n = x_train[0].shape[0]
             batch_iter = BatchIter(num=n, batch_size=self.batch_size)
             batches_per_epoch = np.ceil(n / self.batch_size)
             eval_freq_epochs = np.ceil(self.eval_freq / batches_per_epoch)
@@ -304,7 +315,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             if self.batch_training:
                 for batch_idx in batch_iter:
                     x_batch = [x_tensor[0][batch_idx], x_tensor[1][batch_idx]]
-                    z_batch = z_tensor[batch_idx]
+                    z_batch = z_tensor[batch_idx] if z_tensor is not None else None
                     obj = self.optimize_step(x_batch, z_batch)
                     # loss.append(obj)
             else:
@@ -313,14 +324,14 @@ class GeneralizedEL(AbstractEstimationMethod):
 
             if epoch_i % eval_freq_epochs == 0:
                 cycle_num += 1
-                val_mmr_loss = self._calc_val_mmr(x_val, z_val)
+                val_loss = self.calc_validation_metric(x_val, z_val)
                 if self.verbose:
                     val_theta_obj, _ = self.objective(x_val_tensor, z_val_tensor)
                     print("epoch %d, theta-obj=%f, val-mmr-loss=%f"
-                          % (epoch_i, val_theta_obj, val_mmr_loss))
-                mmr.append(float(val_mmr_loss))
-                if val_mmr_loss < min_val_loss:
-                    min_val_loss = val_mmr_loss
+                          % (epoch_i, val_theta_obj, val_loss))
+                mmr.append(float(val_loss))
+                if val_loss < min_val_loss:
+                    min_val_loss = val_loss
                     num_no_improve = 0
                 elif cycle_num > self.burn_in_cycles:
                     num_no_improve += 1

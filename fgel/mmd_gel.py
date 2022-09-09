@@ -1,24 +1,28 @@
-import time
-
 import cvxpy as cvx
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
 
 from fgel.utils.rkhs_utils import get_rbf_kernel
-from fgel.utils.torch_utils import Parameter, BatchIter
+from fgel.utils.torch_utils import Parameter
 from fgel.generalized_el import GeneralizedEL
 
 cvx_solver = cvx.MOSEK
 
 
-class MMDGEL(GeneralizedEL):
+class KernelGEL(GeneralizedEL):
+    """
+    Kernel generalized empirical likelihood estimator for unconditional moment restrictions.
+    """
 
-    def __init__(self, kernel_x_kwargs=None, kl_reg_param=1e-6, **kwargs):
+    def __init__(self, kl_reg_param=1e-6, kernel_x_kwargs=None, **kwargs):
         super().__init__(**kwargs)
         self.kl_reg_param = kl_reg_param
+
+        if kernel_x_kwargs is None:
+            kernel_x_kwargs = {}
         self.kernel_x_kwargs = kernel_x_kwargs
         self.kernel_x = None
+        self.kernel_x_val = None
 
     def _set_kernel_x(self, x, x_val=None):
         # Use product kernels for now (TAKE CARE WHEN IMPLEMENTING SOMETHING WITH ONLY T NO Y)
@@ -88,73 +92,12 @@ class MMDGEL(GeneralizedEL):
         return
 
     def _init_training(self, x_tensor, z_tensor, x_val_tensor=None, z_val_tensor=None):
-        self._set_kernel(z_tensor, z_val_tensor)
+        self._set_kernel_z(z_tensor, z_val_tensor)
         self._set_kernel_x(x_tensor, x_val_tensor)
         self._init_dual_func()
         self._set_optimizers()
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)
-
-    def _train_internal(self, x_train, z_train, x_val, z_val, debugging):
-        x_tensor = self._to_tensor(x_train)
-        z_tensor = self._to_tensor(z_train)
-        x_val_tensor = self._to_tensor(x_val)
-        z_val_tensor = self._to_tensor(z_val)
-
-        if self.batch_training:
-            n = z_train.shape[0]
-            batch_iter = BatchIter(num=n, batch_size=self.batch_size)
-            batches_per_epoch = np.ceil(n / self.batch_size)
-            eval_freq_epochs = np.ceil(self.eval_freq / batches_per_epoch)
-        else:
-            eval_freq_epochs = self.eval_freq
-
-        self._init_training(x_tensor, z_tensor)
-        # loss = []
-        mmr = []
-
-        min_val_loss = float("inf")
-        time_0 = time.time()
-        num_no_improve = 0
-        cycle_num = 0
-
-        for epoch_i in range(self.max_num_epochs):
-            self.model.train()
-            self.dual_func.train()
-            if self.batch_training:
-                for batch_idx in batch_iter:
-                    x_batch = [x_tensor[0][batch_idx], x_tensor[1][batch_idx]]
-                    z_batch = z_tensor[batch_idx]
-                    obj = self.optimize_step(x_batch, z_batch)
-                    # loss.append(obj)
-            else:
-                obj = self.optimize_step(x_tensor, z_tensor)
-                # loss.append(obj)
-
-            if epoch_i % eval_freq_epochs == 0:
-                cycle_num += 1
-                val_mmr_loss = self._calc_val_mmr(x_val, z_val)
-                if self.verbose:
-                    val_theta_obj, _ = self.objective(x_val_tensor, z_val_tensor)
-                    print("epoch %d, theta-obj=%f, val-mmr-loss=%f"
-                          % (epoch_i, val_theta_obj, val_mmr_loss))
-                mmr.append(float(val_mmr_loss))
-                if val_mmr_loss < min_val_loss:
-                    min_val_loss = val_mmr_loss
-                    num_no_improve = 0
-                elif cycle_num > self.burn_in_cycles:
-                    num_no_improve += 1
-                if num_no_improve == self.max_no_improve:
-                    break
-        if self.verbose:
-            print("time taken:", time.time() - time_0)
-        if debugging:
-            try:
-                plt.plot(mmr)
-                plt.show()
-            except:
-                pass
-
 
 
 if __name__ == '__main__':

@@ -5,8 +5,8 @@ from fgel.abstract_estimation_method import AbstractEstimationMethod
 
 
 class KernelMMR(AbstractEstimationMethod):
-    def __init__(self, model, kernel_args=None, verbose=False):
-        AbstractEstimationMethod.__init__(self, model, kernel_args)
+    def __init__(self, model, kernel_z_kwargs=None, verbose=False):
+        AbstractEstimationMethod.__init__(self, model, kernel_z_kwargs)
         self.verbose = verbose
 
     def _train_internal(self, x, z, x_val, z_val, debugging):
@@ -14,7 +14,7 @@ class KernelMMR(AbstractEstimationMethod):
         z_tensor = self._to_tensor(z)
         n_sample = z_tensor.shape[0]
 
-        self._set_kernel(z, z_val)
+        self._set_kernel_z(z, z_val)
 
         optimizer = torch.optim.LBFGS(self.model.parameters(),
                                       line_search_fn="strong_wolfe")

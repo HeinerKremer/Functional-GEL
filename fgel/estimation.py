@@ -56,7 +56,7 @@ def fgel_estimation(model, train_data, moment_function, version='kernel', diverg
             estimator.train(x_train, z_train, x_val, z_val)
 
             if val_loss_func is None:
-                val_loss = estimator._calc_val_mmr(x_val, z_val)
+                val_loss = estimator.calc_validation_metric(x_val, z_val)
             else:
                 val_loss = val_loss_func(model_wrapper.model, validation_data)
             models.append(model_wrapper.model)

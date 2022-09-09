@@ -38,7 +38,7 @@ class KernelFGEL(GeneralizedEL):
     def _optimize_dual_func_cvxpy(self, x_tensor, z_tensor):
         """CVXPY dual_func optimization for kernelized objective"""
         n_sample = z_tensor.shape[0]
-        self._set_kernel(z_tensor)
+        self._set_kernel_z(z_tensor)
 
         with torch.no_grad():
             try:

@@ -6,8 +6,8 @@ from fgel.abstract_estimation_method import AbstractEstimationMethod
 
 
 class KernelVMM(AbstractEstimationMethod):
-    def __init__(self, model, alpha, kernel_args=None, num_iter=2, verbose=False):
-        AbstractEstimationMethod.__init__(self, model, kernel_args)
+    def __init__(self, model, alpha, kernel_z_kwargs=None, num_iter=2, verbose=False):
+        AbstractEstimationMethod.__init__(self, model, kernel_z_kwargs)
         self.alpha = alpha
         self.num_iter = num_iter
         self.verbose = verbose
@@ -32,7 +32,7 @@ class KernelVMM(AbstractEstimationMethod):
     def _try_fit_internal(self, x, z, x_val, z_val, alpha):
         x_tensor = self._to_tensor(x)
 
-        self._set_kernel(z, z_val)
+        self._set_kernel_z(z, z_val)
 
         for iter_i in range(self.num_iter):
             # obtain m matrix for this iteration, using current theta parameter

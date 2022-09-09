@@ -5,16 +5,16 @@ import torch
 
 
 class AbstractEstimationMethod:
-    def __init__(self, model, kernel_args=None):
+    def __init__(self, model, kernel_z_kwargs=None):
         self.model = model
         self.psi_dim = self.model.psi_dim
         self.dim_z = self.model.dim_z
         self.is_trained = False
 
-        # For validation purposes all methods use the kernel MMR loss and therefore require the kernel Gram matrices
-        if kernel_args is None:
-            kernel_args = {}
-        self.kernel_args = kernel_args
+        # For validation purposes all methods for CMR use the kernel MMR loss and therefore require the kernel Gram matrices
+        if kernel_z_kwargs is None:
+            kernel_z_kwargs = {}
+        self.kernel_z_kwargs = kernel_z_kwargs
         self.kernel_z = None
         self.k_cholesky = None
         self.kernel_z_val = None
@@ -28,12 +28,12 @@ class AbstractEstimationMethod:
             raise RuntimeError("Need to fit model before getting fitted params")
         return self.model.get_parameters()
 
-    def _set_kernel(self, z, z_val=None):
+    def _set_kernel_z(self, z, z_val=None):
         if self.kernel_z is None and z is not None:
-            self.kernel_z = get_rbf_kernel(z, z, **self.kernel_args).type(torch.float32)
+            self.kernel_z = get_rbf_kernel(z, z, **self.kernel_z_kwargs).type(torch.float32)
             self.k_cholesky = torch.tensor(np.transpose(compute_cholesky_factor(self.kernel_z.detach().numpy())))
         if z_val is not None:
-            self.kernel_z_val = get_rbf_kernel(z_val, z_val, **self.kernel_args)
+            self.kernel_z_val = get_rbf_kernel(z_val, z_val, **self.kernel_z_kwargs)
 
     def _calc_val_mmr(self, x_val, z_val):
         if not isinstance(x_val, torch.Tensor):
@@ -41,10 +41,23 @@ class AbstractEstimationMethod:
         if not isinstance(z_val, torch.Tensor):
             z_val = self._to_tensor(z_val)
         n = z_val.shape[0]
-        self._set_kernel(z=None, z_val=z_val)
+        self._set_kernel_z(z=None, z_val=z_val)
         psi = self.model.psi(x_val)
         loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z_val, psi) / (n ** 2)
         return loss
+
+    def _calc_val_moment_violation(self, x_val):
+        if not isinstance(x_val, torch.Tensor):
+            x_val = self._to_tensor(x_val)
+        psi = self.model.psi(x_val)
+        mse_moment_violation = torch.sum(torch.square(psi)) / psi.shape[0]
+        return mse_moment_violation
+
+    def calc_validation_metric(self, x_val, z_val):
+        if z_val is None:
+            return self._calc_val_moment_violation(x_val)
+        else:
+            return self._calc_val_mmr(x_val, z_val)
 
     def _to_tensor(self, data_array):
         return np_to_tensor(data_array)
@@ -59,8 +72,8 @@ class AbstractEstimationMethod:
         def closure():
             optimizer.zero_grad()
             psi = self.model.psi(x)
-            if mmr:
-                self._set_kernel(z=z)
+            if mmr and z is not None:
+                self._set_kernel_z(z=z)
                 loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z, psi) / (x[0].shape[0] ** 2)
             else:
                 loss = (psi ** 2).mean()
