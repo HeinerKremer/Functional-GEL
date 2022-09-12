@@ -30,7 +30,7 @@ experiments = {
 }
 
 methods = {
-    'OrdinaryLeastSquares':
+    'OLS':
         {
             'estimator_class': OrdinaryLeastSquares,
             'estimator_kwargs': {},
@@ -123,19 +123,6 @@ for divergence in ['chi2', 'kl', 'log']:
                         }
         }
 
-for divergence in ['chi2', 'kl', 'log']:
-    methods[f'KernelFGEL-{divergence}-oadam'] = {
-        'estimator_class': KernelFGEL,
-        'estimator_kwargs': {
-            'theta_optim': 'oadam_gda',
-            "max_num_epochs": 20000,
-            "burn_in_cycles": 5,
-            "eval_freq": 100,
-            "max_no_improve": 3, },
-        'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8],
-                        "divergence": divergence,
-                        }
-        }
 
 for divergence in ['chi2', 'kl', 'log']:
     methods[f'NeuralFGEL-{divergence}'] = {

@@ -141,7 +141,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                                                      line_search_fn="strong_wolfe",
                                                      max_iter=100)
             self.optimize_step = self._lbfgs_step
-        if self.theta_optim_type == 'oadam_gda':
+        elif self.theta_optim_type == 'oadam_gda':
             # Optimistic Adam gradient descent ascent (e.g. for neural FGEL/VMM)
             self.theta_optimizer = OAdam(params=self.model.parameters(), lr=self.theta_optim_args["lr"],
                                          betas=(0.5, 0.9))

@@ -8,87 +8,73 @@ import torch
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
 
+from fgel.estimation import estimation
 
-def run_experiment(experiment, exp_params, n_train, estimator_class, estimator_kwargs=None,
+
+def run_experiment(experiment, exp_params, n_train, estimation_method, estimator_kwargs=None,
                    hyperparams=None, seed0=12345):
     """
     Runs experiment with specified estimator and choice of hyperparams and returns the best model and the
     corresponding error measures.
     """
-    if estimator_kwargs is None:
-        estimator_kwargs = {}
-    if hyperparams is None or hyperparams == {}:
-        hyperparams = {None: [None]}
-    hypervals = list(hyperparams.values())[0]
-    hyperparam = list(hyperparams.keys())[0]
-
     np.random.seed(seed0)
     torch.random.manual_seed(seed0+1)
+
     exp = experiment(**exp_params)
-    exp.setup_data(n_train=n_train, n_val=n_train, n_test=20000)
+    exp.prepare_dataset(n_train=n_train, n_val=n_train, n_test=20000)
+    model = exp.init_model()
 
-    train_risks = []
-    val_risks = []
+    trained_model, full_results = estimation(model=model,
+                                             train_data=exp.train_data,
+                                             moment_function=exp.moment_function,
+                                             estimation_method=estimation_method,
+                                             estimator_kwargs=estimator_kwargs, hyperparams=hyperparams,
+                                             validation_data=exp.val_data, val_loss_func=exp.validation_loss,
+                                             verbose=True)
+
     test_risks = []
-    mses = []
-    val_mmr = []
-    params = []
-    models = []
-    for hyperval in hypervals:
-        model = exp.init_model()
-        if hyperval is None:
-            estimator = estimator_class(model=model, **estimator_kwargs)
-        else:
-            hparam = {hyperparam: hyperval}
-            estimator = estimator_class(model=model, **hparam, **estimator_kwargs)
-        estimator.train(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
+    parameter_mses = []
 
-        models.append(model)
+    # Evaluate test metrics for all models (independent of hyperparam search)
+    for model in full_results['models']:
+        test_risks.append(float(exp.eval_risk(model, exp.test_data)))
+        parameter_mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
 
-        params.append(float(np.squeeze(model.get_parameters())))
-        train_risks.append(float(exp.eval_test_risk(model, exp.x_train)))
-        val_risks.append(float(exp.eval_test_risk(model, exp.x_val)))
-        test_risks.append(float(exp.eval_test_risk(model, exp.x_test)))
-        mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
-        val_mmr.append(float(estimator._calc_val_mmr(exp.x_val, exp.z_val).detach().numpy()))
-    stats = {'hyperparam': hypervals,
-             'param': params,
-             'train_risk': train_risks,
-             'val_risk': val_risks,
-             'test_risk': test_risks,
-             'mse': mses,
-             'val_mmr': val_mmr}
-    return stats
+    # Models can't be saved as json and are not needed anymore
+    del full_results['models']
+
+    result = {'test_risk_optim': test_risks[full_results['best_index']],
+              'parameter_mse_optim': parameter_mses[full_results['best_index']],
+              'test_risks': test_risks, 'parameter_mses': parameter_mses,
+              'full_results': full_results,}
+    return result
 
 
-def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, estimator_kwargs, hyperparams,
-                            repititions, seed0=12345, parallel=True, filename=None):
+def run_experiment_repeated(experiment, exp_params, n_train, estimation_method, estimator_kwargs=None, hyperparams=None,
+                            repititions=2, seed0=12345, parallel=True, filename=None):
     """
     Runs the same experiment `repititions` times and computes statistics.
     """
     if parallel:
-        results = run_parallel(experiment=experiment, exp_params=exp_params, n_train=n_train, estimator_class=estimator_class,
-                               estimator_kwargs=estimator_kwargs, hyperparams=hyperparams, repititions=repititions, seed0=seed0)
+        results = run_parallel(experiment=experiment, exp_params=exp_params, n_train=n_train,
+                               estimation_method=estimation_method, estimator_kwargs=estimator_kwargs,
+                               hyperparams=hyperparams, repititions=repititions, seed0=seed0)
         results = list(results)
     else:
         print('Using sequential debugging mode.')
         results = []
         for i in range(repititions):
             stats = run_experiment(experiment=experiment, exp_params=exp_params, n_train=n_train,
-                                   estimator_class=estimator_class, estimator_kwargs=estimator_kwargs,
+                                   estimation_method=estimation_method, estimator_kwargs=estimator_kwargs,
                                    hyperparams=hyperparams, seed0=seed0+i)
             results.append(stats)
 
     if filename is not None:
-        if str(estimator_class.__name__) in {'KernelFGEL', 'NeuralFGEL'}:
-            divergence = f'-{estimator_kwargs["divergence"]}'
+        if estimation_method.split('-')[-1] in {'chi2', 'kl', 'log'} or 'divergence' in {hyperparams}:
+            divergence = f'-{hyperparams["divergence"]}'
         else:
             divergence = ""
-        if str(estimator_class.__name__) == 'KernelFGEL':
-            optim = f'-{estimator_kwargs["theta_optim"]}'
-        else:
-            optim = ''
-        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={str(estimator_class.__name__)}{divergence}{optim}_n={n_train}"
+        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={estimation_method}{divergence}_n={n_train}"
         os.makedirs(os.path.dirname(prefix), exist_ok=True)
         print(filename)
         print(prefix + str(filename) + ".json")
@@ -97,62 +83,34 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimator_class, es
     return results
 
 
-def run_parallel(experiment, exp_params, n_train, estimator_class, estimator_kwargs, hyperparams, repititions, seed0):
+def run_parallel(experiment, exp_params, n_train, estimation_method, estimator_kwargs, hyperparams, repititions, seed0):
     experiment_list = [copy.deepcopy(experiment) for _ in range(repititions)]
     exp_params_list = [copy.deepcopy(exp_params) for _ in range(repititions)]
     n_train_list = [copy.deepcopy(n_train) for _ in range(repititions)]
-    estimator_class_list = [copy.deepcopy(estimator_class) for _ in range(repititions)]
+    estimator_method_list = [copy.deepcopy(estimation_method) for _ in range(repititions)]
     estimator_kwargs_list = [copy.deepcopy(estimator_kwargs) for _ in range(repititions)]
     hyperparams_list = [copy.deepcopy(hyperparams) for _ in range(repititions)]
-    # validation_loss_list = ['mmr' for _ in range(repititions)]
     seeds = [seed0+i for i in range(repititions)]
 
     with ProcessPoolExecutor(min(multiprocessing.cpu_count(), repititions)) as ex:
-        results = ex.map(run_experiment, experiment_list, exp_params_list, n_train_list, estimator_class_list,
+        results = ex.map(run_experiment, experiment_list, exp_params_list, n_train_list, estimator_method_list,
                          estimator_kwargs_list, hyperparams_list, seeds)
     return results
 
 
-def run_all(experiment, repititions, method=None, filename=None):
-    """
-    Runs all methods for all sample sizes `n_train_list` sequentially `repititions` times. This can be used if one has
-    only access to a single machine instead of a computer cluster. Might take a long time to finish.
-    """
-    from fgel.default_config import methods, experiments
-
-    exp_info = experiments[experiment]
-
-    if method is not None:
-        methods = {method: methods[method]}
-
-    for n_train in exp_info['n_train']:
-        for method, estimator_info in methods.items():
-            print(f'Running {method} with n_train={n_train}.')
-            run_experiment_repeated(experiment=exp_info['exp_class'],
-                                    exp_params=exp_info['exp_params'],
-                                    n_train=n_train,
-                                    estimator_class=estimator_info['estimator_class'],
-                                    estimator_kwargs=estimator_info['estimator_kwargs'],
-                                    hyperparams=estimator_info['hyperparams'],
-                                    repititions=repititions,
-                                    filename=filename)
-
-
 if __name__ == "__main__":
-    from fgel.default_config import methods, experiments
+    from fgel.default_config import experiments
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_all', action='store_true')
     parser.add_argument('--run_sequential', action='store_true')
     parser.add_argument('--experiment', type=str, default='heteroskedastic')
     parser.add_argument('--exp_option', default=None)
     parser.add_argument('--n_train', type=int, default=100)
-    parser.add_argument('--method', type=str, default='OrdinaryLeastSquares')
+    parser.add_argument('--method', type=str, default='KernelVMM')
     parser.add_argument('--rollouts', type=int, default=2)
 
     args = parser.parse_args()
 
-    estimator_info = methods[args.method]
     exp_info = experiments[args.experiment]
 
     if args.exp_option is not None:
@@ -161,16 +119,11 @@ if __name__ == "__main__":
     else:
         filename = ''
 
-    if args.run_all:
-        run_all(args.experiment, args.rollouts, args.method, filename)
-    else:
-        results = run_experiment_repeated(experiment=exp_info['exp_class'],
-                                          exp_params=exp_info['exp_params'],
-                                          n_train=args.n_train,
-                                          estimator_class=estimator_info['estimator_class'],
-                                          estimator_kwargs=estimator_info['estimator_kwargs'],
-                                          hyperparams=estimator_info['hyperparams'],
-                                          repititions=args.rollouts,
-                                          parallel=not args.run_sequential,
-                                          filename=filename)
-        print(results)
+    results = run_experiment_repeated(experiment=exp_info['exp_class'],
+                                      exp_params=exp_info['exp_params'],
+                                      n_train=args.n_train,
+                                      estimation_method=args.method,
+                                      repititions=args.rollouts,
+                                      parallel=not args.run_sequential,
+                                      filename=filename)
+    print(results)

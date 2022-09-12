@@ -4,17 +4,20 @@ class AbstractExperiment:
         self.psi_dim = psi_dim
         self.theta_dim = theta_dim
         self.z_dim = z_dim
-        self.x_train, self.z_train = None, None
-        self.x_val, self.z_val = None, None
-        self.x_test, self.z_test = None, None
+        self.train_data = None
+        self.val_data = None
+        self.test_data = None
 
     def generate_data(self, num_data):
         raise NotImplementedError
 
-    def setup_data(self, n_train, n_val=None, n_test=None):
-        self.x_train, self.z_train = self.generate_data(n_train)
-        self.x_val, self.z_val = self.generate_data(n_val)
-        self.x_test, self.z_test = self.generate_data(n_test)
+    def prepare_dataset(self, n_train, n_val=None, n_test=None):
+        self.train_data = self.generate_data(n_train)
+        self.val_data = self.generate_data(n_val)
+        self.test_data = self.generate_data(n_test)
+
+    def validation_loss(self, model, val_data):
+        raise NotImplementedError
 
     def init_model(self):
         raise NotImplementedError

@@ -112,7 +112,7 @@ if __name__ == '__main__':
     }
 
     exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise, heteroskedastic=True)
-    exp.setup_data(n_train=100, n_val=100, n_test=20000)
+    exp.prepare_dataset(n_train=100, n_val=100, n_test=20000)
     model = exp.init_model()
 
     estimator = MMDEL(model=model, kl_reg_param=kl_reg_param, **estimator_kwargs)

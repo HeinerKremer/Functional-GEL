@@ -124,7 +124,7 @@ class NetworkIVExperiment(AbstractExperiment):
 
 if __name__ == '__main__':
     exp = NetworkIVExperiment(ftype='abs')
-    exp.setup_data(n_train=2000, n_val=2000, n_test=20000)
+    exp.prepare_dataset(n_train=2000, n_val=2000, n_test=20000)
     model = exp.init_model()
 
 

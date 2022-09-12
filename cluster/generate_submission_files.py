@@ -1,5 +1,5 @@
 import os
-from experiments.exp_config import methods
+from fgel.default_config import methods
 
 # ---------------- Cluster resources
 cpus = 16

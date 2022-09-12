@@ -47,7 +47,7 @@ def estimation(model, train_data, moment_function, estimation_method,
         hyperparams_default.update(hyperparams)
     hyperparams = hyperparams_default
 
-    # Train estimator for different hyperparams and return best model
+    # Train estimator for different hyperparams and return best model (models for other hparams also stored)
     trained_model, train_statistics = optimize_hyperparams(model=model,
                                                            moment_function=moment_function,
                                                            estimator_class=estimator_class,
@@ -74,7 +74,7 @@ def iterate_argument_combinations(argument_dict):
 
 
 def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwargs, hyperparams,
-                         train_data, validation_data=None, val_loss_func=None, verbose=False):
+                         train_data, validation_data=None, val_loss_func=None, verbose=True):
     x_train = [train_data['t'], train_data['y']]
     z_train = train_data['z']
 
@@ -86,7 +86,7 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
         z_val = z_train
 
     models = []
-    params = []
+    hparams = []
     validation_loss = []
 
     for hyper in iterate_argument_combinations(hyperparams):
@@ -102,19 +102,20 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
             val_loss = estimator.calc_validation_metric(x_val, z_val)
         else:
             val_loss = val_loss_func(model_wrapper.model, validation_data)
-        models.append(model_wrapper.model)
-        params.append(hyper)
-        validation_loss.append(val_loss.detach().numpy())
+        models.append(model_wrapper)
+        hparams.append(hyper)
+        validation_loss.append(val_loss)
 
     best_val = np.argmin(validation_loss)
-    best_params = params[best_val]
+    best_hparams = hparams[best_val]
     if verbose:
-        print('Best hyperparams: ', best_params)
-    return models[best_val], {'models': models, 'val_loss': validation_loss, 'params': params, 'best_params': best_params}
+        print('Best hyperparams: ', best_hparams)
+    return models[best_val], {'models': models, 'val_loss': validation_loss, 'hparams': hparams, 'best_hparams': best_hparams,
+                              'best_index': int(best_val)}
 
 
-def fgel_estimation2(model, train_data, moment_function, version='kernel', divergence=None, reg_param=None,
-                       validation_data=None, val_loss_func=None, verbose=True):
+def fgel_estimation(model, train_data, moment_function, version='kernel', divergence=None, reg_param=None,
+                    validation_data=None, val_loss_func=None, verbose=True):
     if version == 'kernel':
         method_name = 'KernelFGEL'
     elif version == 'neural':
@@ -129,7 +130,7 @@ def fgel_estimation2(model, train_data, moment_function, version='kernel', diver
         hyperparams.update({'divergence': divergence})
 
     if reg_param is not None:
-        hyperparams.update({'reg'})
+        hyperparams.update({'reg_param': reg_param})
 
     trained_model, train_statistics = estimation(model=model,
                                                  train_data=train_data,
@@ -141,68 +142,6 @@ def fgel_estimation2(model, train_data, moment_function, version='kernel', diver
                                                  val_loss_func=val_loss_func,
                                                  verbose=verbose)
     return trained_model, train_statistics
-
-
-def fgel_estimation(model, train_data, moment_function, version='kernel', divergence=None, reg_param=None,
-                       validation_data=None, val_loss_func=None, verbose=True):
-    x_train = [train_data['t'], train_data['y']]
-    z_train = train_data['z']
-
-    if validation_data is not None:
-        x_val = [validation_data['t'], validation_data['y']]
-        z_val = validation_data['z']
-    else:
-        x_val = x_train
-        z_val = z_train
-
-    if version == 'kernel':
-        method_name = 'KernelFGEL'
-    elif version == 'neural':
-        method_name = 'NeuralFGEL'
-    else:
-        raise NotImplementedError('Invalid version specified. Use either `kernel` or `neural`.')
-
-    if divergence is None:
-        divergences = ['chi2', 'kl', 'log']
-    else:
-        divergences = [divergence]
-
-    models = []
-    validation_loss = []
-    params = []
-
-    for divergence in divergences:
-        method = methods[method_name + f'-{divergence}']
-        estimator_class = method['estimator_class']
-        estimator_kwargs = method['estimator_kwargs']
-        hyperparams = method['hyperparams']
-        hyper_param_name = list(hyperparams.keys())[0]
-
-        if reg_param is not None:
-            hyperparams = {hyper_param_name: [reg_param]}
-
-        for hval in list(hyperparams.values())[0]:
-            hyper = {hyper_param_name: hval}
-            model_wrapper = ModelWrapper(model=copy.deepcopy(model),
-                                         moment_function=moment_function,
-                                         dim_y=x_train[1].shape[1], dim_z=z_train.shape[1])
-            if verbose:
-                print('Running: ', f'divergence={divergence}, reg_param={hval}')
-            estimator = estimator_class(model=model_wrapper, **hyper, **estimator_kwargs)
-            estimator.train(x_train, z_train, x_val, z_val)
-
-            if val_loss_func is None:
-                val_loss = estimator.calc_validation_metric(x_val, z_val)
-            else:
-                val_loss = val_loss_func(model_wrapper.model, validation_data)
-            models.append(model_wrapper.model)
-            params.append({'divergence': divergence, **hyper})
-            validation_loss.append(val_loss.detach().numpy())
-    best_val = np.argmin(validation_loss)
-    best_params = params[best_val]
-    if verbose:
-        print('Best config: ', best_params)
-    return models[best_val], {'models': models, 'val_loss': validation_loss, 'params': params, 'best_params': best_params}
 
 
 def fgel_iv_estimation(model, train_data, version='kernel', divergence=None, reg_param=None,
@@ -224,15 +163,68 @@ class ModelWrapper(nn.Module):
         self.psi_dim = dim_y
         self.dim_z = dim_z
 
+    def forward(self, t):
+        return self.model(t)
+
     def psi(self, data):
         t, y = torch.Tensor(data[0]), torch.Tensor(data[1])
         return self.moment_function(self.model(t), y)
 
     def get_parameters(self):
-        param_tensor = self.model.parameters().data
-        return param_tensor.detach().numpy()
+        param_tensor = list(self.model.parameters())
+        return [p.detach().numpy() for p in param_tensor]
 
     def is_finite(self):
         isnan = np.sum(np.isnan(self.get_parameters()))
         isfinite = np.sum(np.isfinite(self.get_parameters()))
         return (not isnan) and isfinite
+
+
+if __name__ == "__main__":
+    def generate_data(n_sample):
+        e = np.random.normal(loc=0, scale=1.0, size=[n_sample, 1])
+        gamma = np.random.normal(loc=0, scale=0.1, size=[n_sample, 1])
+        delta = np.random.normal(loc=0, scale=0.1, size=[n_sample, 1])
+
+        z = np.random.uniform(low=-3, high=3, size=[n_sample, 1])
+        t = np.reshape(z[:, 0], [-1, 1]) + e + gamma
+        y = np.abs(t) + e + delta
+        return {'t': t, 'y': y, 'z': z}
+
+    train_data = generate_data(n_sample=100)
+    validation_data = generate_data(n_sample=100)
+    test_data = generate_data(n_sample=10000)
+
+
+    class NetworkModel(nn.Module):
+        def __init__(self):
+            nn.Module.__init__(self)
+            self._model = torch.nn.Sequential(
+                torch.nn.Linear(1, 20),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(20, 3),
+                torch.nn.LeakyReLU(),
+                torch.nn.Linear(3, 1)
+            )
+
+        def forward(self, t):
+            if not isinstance(t, torch.Tensor):
+                t = torch.tensor(t, dtype=torch.float32)
+            return self._model(t)
+
+
+    def moment_function(model_evaluation, y):
+        return model_evaluation - y
+
+
+    model = NetworkModel()
+
+    trained_model, stats = estimation(model=model,
+                                      train_data=train_data,
+                                      moment_function=moment_function,
+                                      estimation_method='KernelFGEL',
+                                      estimator_kwargs=None, hyperparams=None,
+                                      validation_data=None, val_loss_func=None,
+                                      verbose=True)
+    # Make prediction
+    y_pred = trained_model(torch.Tensor(test_data['t']))

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 from experiments.abstract_experiment import AbstractExperiment
-from fgel.baselines.least_squares import OrdinaryLeastSquares
 
 
 def eval_model(t, theta, numpy=False):
@@ -24,21 +23,8 @@ class LinearModel(nn.Module):
     def forward(self, t):
         return eval_model(t, torch.reshape(self.theta, [1, -1]))
 
-    def psi(self, data):
-        t, y = torch.Tensor(data[0]), torch.Tensor(data[1])
-        return self.forward(t) - y
-
-    def get_parameters(self):
-        param_tensor = self.theta.data
-        return param_tensor.detach().numpy()
-
     def initialize(self):
         nn.init.normal_(self.theta)
-
-    def is_finite(self):
-        isnan = np.sum(np.isnan(self.get_parameters()))
-        isfinite = np.sum(np.isfinite(self.get_parameters()))
-        return (not isnan) and isfinite
 
 
 class HeteroskedasticNoiseExperiment(AbstractExperiment):
@@ -64,48 +50,52 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         else:
             error1 = np.random.normal(0, self.noise, [num_data, 1])
         y = eval_model(t, self.theta0, numpy=True) + error1
-        x = [t, y]
-        z = t
-        return x, z
+        return {'t': t, 'y': y, 'z': t}
+
+    @staticmethod
+    def moment_function(model_evaluation, y):
+        return model_evaluation - y
 
     def get_true_parameters(self):
         return np.array(self.theta0)
 
-    def eval_test_risk(self, model, data_test):
-        t_test = data_test[0].reshape(-1, 1)
+    def eval_risk(self, model, data):
+        t_test = data['t']
         y_test = eval_model(t_test, self.theta0, numpy=True)
-        y_pred = model.forward(torch.tensor(data_test[0])).detach().numpy()
+        y_pred = model.forward(torch.tensor(data['t'])).detach().numpy()
         return float(((y_test - y_pred) ** 2).mean())
 
+    def validation_loss(self, model, val_data):
+        return self.eval_risk(model, val_data)
 
-def run_heteroskedastic_n_times(theta, noise, n_train, repititions, estimatortype, estimatorkwargs=None):
+
+if __name__ == '__main__':
+    from fgel.estimation import estimation
     np.random.seed(12345)
     torch.random.manual_seed(12345)
+    exp = HeteroskedasticNoiseExperiment(theta=[1.4], noise=2.0, heteroskedastic=True)
 
-    if estimatorkwargs is None:
-        estimatorkwargs = {}
-    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise, heteroskedastic=True)
-    train_risks = []
     test_risks = []
     mses = []
     thetas = []
 
-    for i in range(repititions):
-        exp.setup_data(n_train=n_train, n_val=n_train, n_test=20000)
+    for i in range(5):
+        exp.prepare_dataset(n_train=200, n_val=2000, n_test=20000)
         model = exp.init_model()
-        estimator = estimatortype(model=model, **estimatorkwargs)
-        estimator.train(exp.x_train, exp.z_train, exp.x_val, exp.z_val)
-        train_risks.append(exp.eval_test_risk(model, exp.x_train))
-        test_risks.append(exp.eval_test_risk(model, exp.x_test))
-        mses.append(np.mean(np.square(np.squeeze(model.get_parameters()) - exp.theta0)))
-        thetas.append(float(np.squeeze(model.get_parameters())))
+        trained_model, stats = estimation(model=model,
+                                          train_data=exp.train_data,
+                                          moment_function=exp.moment_function,
+                                          estimation_method='KernelFGEL',
+                                          estimator_kwargs=None, hyperparams=None,
+                                          validation_data=exp.val_data, val_loss_func=exp.validation_loss,
+                                          verbose=True
+                                          )
+
+        mses.append(np.mean(np.square(np.squeeze(trained_model.get_parameters()) - exp.theta0)))
+        test_risks.append(exp.eval_risk(trained_model, exp.test_data))
+        thetas.append(float(np.squeeze(trained_model.get_parameters())))
+
+    results = {'theta': thetas, 'test_risk': test_risks, 'mse': mses}
+    print(results)
     print(rf'Test risk: {np.mean(test_risks)} $\pm$ {np.std(test_risks)}')
     print(rf'Parameter MSE: {np.mean(mses)} $\pm$ {np.std(mses)}')
-    results = {'theta': thetas, 'test_risk': test_risks, 'mse': mses, 'train_risk': train_risks}
-    return results
-
-
-if __name__ == '__main__':
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=2000, repititions=10,
-                                         estimatortype=OrdinaryLeastSquares)
-    print('Thetas: ', results['theta'])

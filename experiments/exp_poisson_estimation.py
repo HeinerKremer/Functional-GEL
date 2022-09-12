@@ -10,6 +10,7 @@ def generate_data(poisson_param, n_sample):
     data = {'t': None, 'y': y, 'z': None}
     return data
 
+
 class PoissonParameter(nn.Module):
     def __init__(self):
         nn.Module.__init__(self)
