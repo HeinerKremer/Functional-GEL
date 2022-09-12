@@ -9,9 +9,9 @@ from fgel.generalized_el import GeneralizedEL
 cvx_solver = cvx.MOSEK
 
 
-class KernelGEL(GeneralizedEL):
+class MMDEL(GeneralizedEL):
     """
-    Kernel generalized empirical likelihood estimator for unconditional moment restrictions.
+    Maximum mean discrepancy empirical likelihood estimator for unconditional moment restrictions.
     """
 
     def __init__(self, kl_reg_param=1e-6, kernel_x_kwargs=None, **kwargs):
@@ -35,7 +35,7 @@ class KernelGEL(GeneralizedEL):
 
     def _init_dual_func(self):
         self.dual_func = Parameter(shape=(1, self.psi_dim))
-        self.rkhs_func = Parameter(shape=(self.kernel_z.shape[0], 1))
+        self.rkhs_func = Parameter(shape=(self.kernel_x.shape[0], 1))
         self.dual_normalization = Parameter(shape=(1, 1))
 
     def _set_divergence_function(self):
@@ -101,10 +101,19 @@ class KernelGEL(GeneralizedEL):
 
 
 if __name__ == '__main__':
-    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
 
-    estimatorkwargs = dict(theta_optim_args={}, max_num_epochs=100, eval_freq=50,
-                           divergence='chi2', outeropt='lbfgs', inneropt='cvxpy', inneriters=100)
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=10,
-                                          estimatortype=GeneralizedEL, estimatorkwargs=estimatorkwargs)
-    print('Thetas: ', results['theta'])
+    kl_reg_param = 1e-3
+
+    estimator_kwargs = {
+        "dual_optim": 'lbfgs',
+        "theta_optim": 'lbfgs',
+        "eval_freq": 100,
+        "max_num_epochs": 20000,
+    }
+
+    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise, heteroskedastic=True)
+    exp.setup_data(n_train=100, n_val=100, n_test=20000)
+    model = exp.init_model()
+
+    estimator = MMDEL(model=model, kl_reg_param=kl_reg_param, **estimator_kwargs)
+

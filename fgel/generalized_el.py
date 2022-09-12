@@ -328,7 +328,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                 if self.verbose:
                     val_theta_obj, _ = self.objective(x_val_tensor, z_val_tensor)
                     print("epoch %d, theta-obj=%f, val-mmr-loss=%f"
-                          % (epoch_i, val_theta_obj, val_loss))
+                          % (epoch_i, val_theta_obj.detach().numpy(), val_loss.detach().numpy()))
                 mmr.append(float(val_loss))
                 if val_loss < min_val_loss:
                     min_val_loss = val_loss
