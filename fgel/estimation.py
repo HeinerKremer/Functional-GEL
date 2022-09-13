@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from fgel.default_config import methods
 
-mr_estimators = ['OLS', 'KernelEL']
+mr_estimators = ['OLS', 'GMM', 'GEL', 'KernelEL']
 cmr_estimators = ['KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'NeuralFGEL']
 
 

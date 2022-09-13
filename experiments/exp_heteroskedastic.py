@@ -67,6 +67,24 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         return self.eval_risk(model, val_data)
 
 
+def test_estimator(estimation_method):
+    from fgel.estimation import estimation
+    exp = HeteroskedasticNoiseExperiment(theta=[1.4], noise=2.0, heteroskedastic=True)
+    exp.prepare_dataset(n_train=200, n_val=2000, n_test=20000)
+    model = exp.init_model()
+    trained_model, stats = estimation(model=model,
+                                      train_data=exp.train_data,
+                                      moment_function=exp.moment_function,
+                                      estimation_method=estimation_method,
+                                      estimator_kwargs=None, hyperparams=None,
+                                      validation_data=exp.val_data, val_loss_func=exp.validation_loss,
+                                      verbose=True
+                                      )
+    print(f'True parameter: {exp.theta0}, \n '
+          f'Parameter estimate: {trained_model.get_parameters()} \n'
+          f'MSE: {np.mean(np.square(np.squeeze(trained_model.get_parameters()) - exp.theta0))}')
+
+
 if __name__ == '__main__':
     from fgel.estimation import estimation
     np.random.seed(12345)
