@@ -17,7 +17,7 @@ class NeuralVMM(NeuralFGEL):
         ow_reg = 0.25 * (m_vector ** 2).mean()
         if self.kernel_lambda > 0:
             k_reg_list = []
-            for i in range(self.psi_dim):
+            for i in range(self.dim_psi):
                 l_f = self.kernel_z.detach().numpy()
                 w = np.linalg.solve(l_f, f_of_z[:, i].detach().cpu().numpy())
                 w = self._to_tensor(w)

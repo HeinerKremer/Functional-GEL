@@ -19,7 +19,7 @@ class KernelVMM(AbstractEstimationMethod):
                 self._try_fit_internal(x, z, x_val, z_val, alpha)
                 did_succeed = self.model.is_finite()
             except:
-                print(self.model.get_parameters())
+                # print(self.model.get_parameters())
                 did_succeed = False
 
             if did_succeed or alpha > 10:
@@ -56,9 +56,9 @@ class KernelVMM(AbstractEstimationMethod):
 
     def _calc_m_matrix(self, x_tensor, alpha):
         n = self.kernel_z.shape[0]
-        k_z_m = np.stack([self.kernel_z for _ in range(self.psi_dim)], axis=0)
+        k_z_m = np.stack([self.kernel_z for _ in range(self.dim_psi)], axis=0)
         psi_m = self.model.psi(x_tensor).detach().cpu().numpy()
-        q = (k_z_m * psi_m.T.reshape(self.psi_dim, 1, n)).reshape(self.psi_dim * n, n)
+        q = (k_z_m * psi_m.T.reshape(self.dim_psi, 1, n)).reshape(self.dim_psi * n, n)
         del psi_m
 
         q = (q  @ q.T) / n

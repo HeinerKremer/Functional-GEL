@@ -7,7 +7,7 @@ import torch.nn as nn
 from fgel.default_config import methods
 
 mr_estimators = ['OLS', 'KernelEL']
-cmr_estimators = ['MMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'NeuralFGEL']
+cmr_estimators = ['KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'NeuralFGEL']
 
 
 def estimation(model, train_data, moment_function, estimation_method,
@@ -106,7 +106,7 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
         hparams.append(hyper)
         validation_loss.append(val_loss)
 
-    best_val = np.argmin(validation_loss)
+    best_val = np.nanargmin(validation_loss)
     best_hparams = hparams[best_val]
     if verbose:
         print('Best hyperparams: ', best_hparams)
@@ -160,7 +160,7 @@ class ModelWrapper(nn.Module):
         nn.Module.__init__(self)
         self.model = model
         self.moment_function = moment_function
-        self.psi_dim = dim_y
+        self.dim_psi = dim_y
         self.dim_z = dim_z
 
     def forward(self, t):
@@ -175,8 +175,9 @@ class ModelWrapper(nn.Module):
         return [p.detach().numpy() for p in param_tensor]
 
     def is_finite(self):
-        isnan = np.sum(np.isnan(self.get_parameters()))
-        isfinite = np.sum(np.isfinite(self.get_parameters()))
+        params = self.get_parameters()
+        isnan = sum([np.sum(np.isnan(p)) for p in params])
+        isfinite = sum([np.sum(np.isfinite(p)) for p in params])
         return (not isnan) and isfinite
 
 

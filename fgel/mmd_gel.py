@@ -34,7 +34,7 @@ class MMDEL(GeneralizedEL):
                                  * get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32))
 
     def _init_dual_func(self):
-        self.dual_func = Parameter(shape=(1, self.psi_dim))
+        self.dual_func = Parameter(shape=(1, self.dim_psi))
         self.rkhs_func = Parameter(shape=(self.kernel_x.shape[0], 1))
         self.dual_normalization = Parameter(shape=(1, 1))
 
@@ -69,7 +69,7 @@ class MMDEL(GeneralizedEL):
             z = z_tensor.numpy()
             n_sample = z.shape[0]
 
-            dual_func = cvx.Variable(shape=(1, self.psi_dim))   # (1, k)
+            dual_func = cvx.Variable(shape=(1, self.dim_psi))   # (1, k)
             dual_normalization = cvx.Variable(shape=(1, 1))
             rkhs_func = cvx.Variable(shape=(n_sample, 1))
 

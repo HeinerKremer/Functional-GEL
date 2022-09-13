@@ -7,7 +7,7 @@ import torch
 class AbstractEstimationMethod:
     def __init__(self, model, kernel_z_kwargs=None):
         self.model = model
-        self.psi_dim = self.model.psi_dim
+        self.dim_psi = self.model.dim_psi
         self.dim_z = self.model.dim_z
         self.is_trained = False
 
@@ -44,14 +44,14 @@ class AbstractEstimationMethod:
         self._set_kernel_z(z=None, z_val=z_val)
         psi = self.model.psi(x_val)
         loss = torch.einsum('ir, ij, jr -> ', psi, self.kernel_z_val, psi) / (n ** 2)
-        return loss
+        return float(loss.detach().numpy())
 
     def _calc_val_moment_violation(self, x_val):
         if not isinstance(x_val, torch.Tensor):
             x_val = self._to_tensor(x_val)
         psi = self.model.psi(x_val)
         mse_moment_violation = torch.sum(torch.square(psi)) / psi.shape[0]
-        return mse_moment_violation
+        return float(mse_moment_violation.detach().numpy())
 
     def calc_validation_metric(self, x_val, z_val):
         if z_val is None:

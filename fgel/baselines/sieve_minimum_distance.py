@@ -13,7 +13,7 @@ class SMDIdentity(AbstractEstimationMethod):
     # Implements SMD algorithm using LBFGS optimizer and identity omega
     def __init__(self, model, num_knots=5, polyn_degree=2):
         AbstractEstimationMethod.__init__(self, model)
-        self.basis = MultiOutputPolynomialSplineBasis(z_dim=self.model.dim_z, num_out=self.psi_dim,
+        self.basis = MultiOutputPolynomialSplineBasis(z_dim=self.model.dim_z, num_out=self.dim_psi,
                                                       num_knots=num_knots, degree=polyn_degree)
 
     def _train_internal(self, x, z, x_val, z_val, debugging):
@@ -22,13 +22,13 @@ class SMDIdentity(AbstractEstimationMethod):
         n = x[0].shape[0]
         x_tensor = self._to_tensor(x)
         z_torch = self._to_tensor(z)
-        omega_inv = np.ones((1, self.psi_dim)).repeat(n, 0)
+        omega_inv = np.ones((1, self.dim_psi)).repeat(n, 0)
         self._fit_theta(x, x_tensor, z_torch, f_z, omega_inv)
 
     def _calc_f_z(self, z):
         # compute basis expansion on instruments
         f_z = self.basis.basis_expansion_np(z)
-        assert f_z.shape[2] == self.psi_dim
+        assert f_z.shape[2] == self.dim_psi
         return f_z
 
     def _fit_theta(self, x, x_tensor, z_torch, f_z, omega_inv):
@@ -53,7 +53,7 @@ class SMDIdentity(AbstractEstimationMethod):
         # define loss and optimize
         def closure():
             optimizer.zero_grad()
-            psi = self.model.psi(x_tensor).view(n, self.psi_dim, 1)
+            psi = self.model.psi(x_tensor).view(n, self.dim_psi, 1)
             psi_f_z = torch.matmul(f_z_torch, psi).mean(0).squeeze(-1)
             loss = torch.matmul(w, psi_f_z).matmul(psi_f_z)
             loss.backward()
@@ -76,12 +76,12 @@ class SMDHomoskedastic(SMDIdentity):
 
         for iter_i in range(self.num_iter):
             if iter_i == 0:
-                var_inv = np.ones(self.psi_dim)
+                var_inv = np.ones(self.dim_psi)
             else:
                 psi = self.model.psi(x_tensor).detach().numpy()
                 psi_residual = psi - psi.mean(0, keepdims=True)
                 var_inv = (psi_residual ** 2).mean(0) ** -1
-            omega_inv = var_inv.reshape(1, self.psi_dim).repeat(n, 0)
+            omega_inv = var_inv.reshape(1, self.dim_psi).repeat(n, 0)
             self._fit_theta(x, x_tensor, z_torch, f_z, omega_inv)
 
         if self.model.is_finite():
@@ -111,7 +111,7 @@ class FlexibleVarNetwork(nn.Module):
 class SMDHeteroskedastic(SMDIdentity):
     def __init__(self, model, num_knots=5, polyn_degree=2, num_iter=2):
         self.num_iter = num_iter
-        self.var_network = FlexibleVarNetwork(model.dim_z, model.psi_dim)
+        self.var_network = FlexibleVarNetwork(model.dim_z, model.dim_psi)
 
         SMDIdentity.__init__(self, model=model,
                              num_knots=num_knots, polyn_degree=polyn_degree)
@@ -125,7 +125,7 @@ class SMDHeteroskedastic(SMDIdentity):
 
         for iter_i in range(self.num_iter):
             if iter_i == 0:
-                omega_inv = np.ones((1, self.psi_dim)).repeat(n, 0)
+                omega_inv = np.ones((1, self.dim_psi)).repeat(n, 0)
             else:
                 psi = self.model.psi(x_tensor)
                 targets = ((psi - psi.mean(0, keepdim=True)) ** 2).detach()

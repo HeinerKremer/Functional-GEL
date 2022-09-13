@@ -38,7 +38,10 @@ def run_experiment(experiment, exp_params, n_train, estimation_method, estimator
     # Evaluate test metrics for all models (independent of hyperparam search)
     for model in full_results['models']:
         test_risks.append(float(exp.eval_risk(model, exp.test_data)))
-        parameter_mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
+        if exp.get_true_parameters is not None:
+            parameter_mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
+        else:
+            parameter_mses.append(0)
 
     # Models can't be saved as json and are not needed anymore
     del full_results['models']

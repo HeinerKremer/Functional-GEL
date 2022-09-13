@@ -26,7 +26,7 @@ class NeuralFGEL(GeneralizedEL):
             "input_dim": self.dim_z,
             "layer_widths": [50, 20],
             "activation": torch.nn.LeakyReLU,
-            "num_out": self.model.psi_dim,
+            "num_out": self.model.dim_psi,
         }
         if dual_func_network_kwargs is not None:
             dual_func_network_kwargs_default.update(dual_func_network_kwargs)

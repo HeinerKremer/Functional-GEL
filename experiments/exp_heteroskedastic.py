@@ -15,10 +15,8 @@ def eval_model(t, theta, numpy=False):
 
 class LinearModel(nn.Module):
     def __init__(self, dim_theta):
-        nn.Module.__init__(self)
+        super().__init__()
         self.theta = nn.Parameter(torch.FloatTensor([[0.5] * dim_theta]))
-        self.psi_dim = 1
-        self.dim_z = 1
 
     def forward(self, t):
         return eval_model(t, torch.reshape(self.theta, [1, -1]))
@@ -33,10 +31,14 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         self.dim_theta = np.shape(self.theta0)[1]
         self.noise = noise
         self.heteroskedastic = heteroskedastic
-        super().__init__(self, theta_dim=self.dim_theta, z_dim=self.dim_theta)
+        super().__init__(dim_psi=1, dim_theta=self.dim_theta, dim_z=self.dim_theta)
 
     def init_model(self):
         return LinearModel(dim_theta=self.dim_theta)
+
+    @staticmethod
+    def moment_function(model_evaluation, y):
+        return model_evaluation - y
 
     def generate_data(self, num_data):
         if num_data is None:
@@ -51,10 +53,6 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
             error1 = np.random.normal(0, self.noise, [num_data, 1])
         y = eval_model(t, self.theta0, numpy=True) + error1
         return {'t': t, 'y': y, 'z': t}
-
-    @staticmethod
-    def moment_function(model_evaluation, y):
-        return model_evaluation - y
 
     def get_true_parameters(self):
         return np.array(self.theta0)

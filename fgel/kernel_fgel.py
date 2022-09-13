@@ -15,7 +15,7 @@ class KernelFGEL(GeneralizedEL):
         self.reg_param = reg_param
 
     def _init_dual_func(self):
-        self.dual_func = Parameter(shape=(self.kernel_z.shape[0], self.psi_dim))
+        self.dual_func = Parameter(shape=(self.kernel_z.shape[0], self.dim_psi))
         # self.dual_normalization = Parameter(shape=(1, 1))
         self.params = torch.nn.Parameter(torch.zeros(size=(1, 1), dtype=torch.float32), requires_grad=True)
 
@@ -43,10 +43,10 @@ class KernelFGEL(GeneralizedEL):
         with torch.no_grad():
             try:
                 x = [xi.numpy() for xi in x_tensor]
-                dual_func = cvx.Variable(shape=(n_sample, self.psi_dim))
+                dual_func = cvx.Variable(shape=(n_sample, self.dim_psi))
                 psi = self.model.psi(x).detach().numpy()
                 dual_func_psi = np.zeros(n_sample)
-                for k in range(self.psi_dim):
+                for k in range(self.dim_psi):
                     dual_func_psi += dual_func[:, k] @ self.kernel_z.detach().numpy() @ cvx.diag(psi[:, k])
 
                 objective = (1/n_sample * cvx.sum(self.gel_function(dual_func_psi, cvxpy=True))

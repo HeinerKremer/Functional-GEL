@@ -63,7 +63,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         self.verbose = verbose
 
     def _init_dual_func(self):
-        self.dual_func = Parameter(shape=(1, self.psi_dim))
+        self.dual_func = Parameter(shape=(1, self.dim_psi))
 
     def _set_divergence_function(self):
         if self.divergence_type == 'log':
@@ -237,7 +237,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             z = z_tensor.numpy()
             n_sample = z.shape[0]
 
-            dual_func = cvx.Variable(shape=(1, self.psi_dim))   # (1, k)
+            dual_func = cvx.Variable(shape=(1, self.dim_psi))   # (1, k)
             psi = self.model.psi(x).detach().numpy()   # (n_sample, k)
             dual_func_psi = psi @ cvx.transpose(dual_func)    # (n_sample, 1)
 
