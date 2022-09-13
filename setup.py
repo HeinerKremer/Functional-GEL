@@ -62,5 +62,5 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy', 'cvxpy', 'torch', 'torchvision', 'sklearn', 'matplotlib', 'tensorflow',
-                      'tqdm', 'tensorflow_probability', 'IPython', 'cvxopt', 'wandb', 'seaborn', 'tabulate'],
+                      'tqdm', 'tensorflow_probability', 'IPython', 'cvxopt', 'wandb', 'seaborn', 'tabulate', 'mosek'],
 )

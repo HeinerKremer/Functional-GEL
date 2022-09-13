@@ -10,7 +10,7 @@ class OrdinaryLeastSquares(AbstractEstimationMethod):
     def _train_internal(self, x, z, x_dev, z_dev, debugging):
         x_tensor = self._to_tensor(x)
         z_tensor = self._to_tensor(z)
-        n_sample = z_tensor.shape[0]
+        n_sample = x_tensor[0].shape[0]
 
         optimizer = torch.optim.LBFGS(self.model.parameters(),
                                       line_search_fn="strong_wolfe")

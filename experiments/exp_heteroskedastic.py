@@ -8,9 +8,9 @@ def eval_model(t, theta, numpy=False):
     if not numpy:
         if not torch.is_tensor(t):
             t = torch.tensor(t)
-        return torch.sum(t * theta.reshape(1, -1), dim=1, keepdim=True).float() ** 1
+        return torch.sum(t * theta.reshape(1, -1), dim=1, keepdim=True).float()
     else:
-        return np.sum(t * theta.reshape(1, -1), axis=1, keepdims=True) ** 1
+        return np.sum(t * theta.reshape(1, -1), axis=1, keepdims=True)
 
 
 class LinearModel(nn.Module):
@@ -52,6 +52,7 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         else:
             error1 = np.random.normal(0, self.noise, [num_data, 1])
         y = eval_model(t, self.theta0, numpy=True) + error1
+        print(np.shape(y))
         return {'t': t, 'y': y, 'z': t}
 
     def get_true_parameters(self):
@@ -69,7 +70,7 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
 
 def test_estimator(estimation_method):
     from fgel.estimation import estimation
-    exp = HeteroskedasticNoiseExperiment(theta=[1.4], noise=2.0, heteroskedastic=True)
+    exp = HeteroskedasticNoiseExperiment(theta=[1.4, 2.0], noise=2.0, heteroskedastic=True)
     exp.prepare_dataset(n_train=200, n_val=2000, n_test=20000)
     model = exp.init_model()
     trained_model, stats = estimation(model=model,
@@ -80,7 +81,7 @@ def test_estimator(estimation_method):
                                       validation_data=exp.val_data, val_loss_func=exp.validation_loss,
                                       verbose=True
                                       )
-    print(f'True parameter: {exp.theta0}, \n '
+    print(f'True parameter: {exp.theta0},\n'
           f'Parameter estimate: {trained_model.get_parameters()} \n'
           f'MSE: {np.mean(np.square(np.squeeze(trained_model.get_parameters()) - exp.theta0))}')
 

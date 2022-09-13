@@ -41,11 +41,17 @@ def np_to_tensor(data_array):
     if type(data_array) == list:
         tensor_list = []
         for element in data_array:
-            data_tensor = torch.from_numpy(element).float()
+            if isinstance(element, torch.Tensor) or element is None:
+                data_tensor = element
+            else:
+                data_tensor = torch.from_numpy(element).float()
             tensor_list.append(data_tensor)
         data_tensor = tensor_list
     else:
-        data_tensor = torch.from_numpy(data_array).float()
+        if isinstance(data_array, torch.Tensor) or data_array is None:
+            data_tensor = data_array
+        else:
+            data_tensor = torch.from_numpy(data_array).float()
     return data_tensor
 
 

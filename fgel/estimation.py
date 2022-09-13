@@ -16,7 +16,6 @@ def estimation(model, train_data, moment_function, estimation_method,
                verbose=True):
     if train_data['z'] is None:
         conditional_mr = False
-        print("No instrument data, `train_data['z']`, found. Using unconditional moment restrictions.")
     else:
         conditional_mr = True
 
@@ -32,6 +31,9 @@ def estimation(model, train_data, moment_function, estimation_method,
         raise RuntimeError("Specified method requires conditional MR but the provided problem is an unconditional MR. "
                            f"Provide instrument data `train_data['z']` or choose `estimation_method` for "
                            f"unconditional MR from {mr_estimators}.")
+
+    if hyperparams is not None:
+        assert np.alltrue([isinstance(h, list) for h in list(hyperparams.values())]), '`hyperparams` arguments must be of the form {key: list}'
 
     # Load estimator and update default estimator kwargs
     method = methods[estimation_method]
@@ -85,6 +87,14 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
         x_val = x_train
         z_val = z_train
 
+    if z_train is None:
+        dim_z = None
+    else:
+        dim_z = z_train.shape[1]
+
+    # Eval moment function once on a single sample to get its dimension
+    dim_psi = moment_function(model(x_train[0][0:1]), x_train[1][0:1]).shape[1]
+
     models = []
     hparams = []
     validation_loss = []
@@ -92,7 +102,7 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
     for hyper in iterate_argument_combinations(hyperparams):
         model_wrapper = ModelWrapper(model=copy.deepcopy(model),
                                      moment_function=moment_function,
-                                     dim_y=x_train[1].shape[1], dim_z=z_train.shape[1])
+                                     dim_psi=dim_psi, dim_z=dim_z)
         if verbose:
             print('Running hyperparams: ', f'{hyper}')
         estimator = estimator_class(model=model_wrapper, **hyper, **estimator_kwargs)
@@ -156,11 +166,11 @@ def fgel_iv_estimation(model, train_data, version='kernel', divergence=None, reg
 
 
 class ModelWrapper(nn.Module):
-    def __init__(self, model, moment_function, dim_y, dim_z):
+    def __init__(self, model, moment_function, dim_psi, dim_z):
         nn.Module.__init__(self)
         self.model = model
         self.moment_function = moment_function
-        self.dim_psi = dim_y
+        self.dim_psi = dim_psi
         self.dim_z = dim_z
 
     def forward(self, t):

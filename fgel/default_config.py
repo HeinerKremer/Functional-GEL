@@ -1,6 +1,7 @@
 from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
 from experiments.exp_network_iv import NetworkIVExperiment
 
+from fgel.baselines.kernel_vmm import KernelVMM
 from fgel.baselines.least_squares import OrdinaryLeastSquares
 from fgel.baselines.kernel_mmr import KernelMMR
 from fgel.baselines.gmm import GMM
@@ -53,7 +54,7 @@ methods = {
                 "theta_optim": 'lbfgs',
                 "eval_freq": 100,
                 "max_num_epochs": 20000,},
-            'hyperparams': {}
+            'hyperparams': {"divergence": ['chi2', 'kl', 'log'],}
         },
 
     'KernelMMR':

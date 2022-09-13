@@ -234,8 +234,7 @@ class GeneralizedEL(AbstractEstimationMethod):
     def _optimize_dual_func_cvxpy(self, x_tensor, z_tensor):
         with torch.no_grad():
             x = [xi.numpy() for xi in x_tensor]
-            z = z_tensor.numpy()
-            n_sample = z.shape[0]
+            n_sample = x[0].shape[0]
 
             dual_func = cvx.Variable(shape=(1, self.dim_psi))   # (1, k)
             psi = self.model.psi(x).detach().numpy()   # (n_sample, k)
@@ -265,6 +264,7 @@ class GeneralizedEL(AbstractEstimationMethod):
         if np.isnan(np.linalg.norm(self.dual_func.params.detach().numpy())):
             with torch.no_grad():
                 self.dual_func.params.copy_(torch.zeros(self.dual_func.shape, dtype=torch.float32))
+        print(self.dual_func.params.detach().numpy())
         return
 
     def _optimize_dual_func_gd(self, x_tensor, z_tensor, iters):

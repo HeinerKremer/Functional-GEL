@@ -36,11 +36,11 @@ class GMM(AbstractEstimationMethod):
             weighting_matrix = self._to_tensor(self._get_inverse_covariance_matrix(x_tensor, alpha))
             optimizer = torch.optim.LBFGS(self.model.parameters(),
                                           line_search_fn="strong_wolfe")
-
             def closure():
                 optimizer.zero_grad()
                 psi = self.model.psi(x_tensor)
-                loss = torch.einsum('ik, kr, jr -> ', psi, weighting_matrix, psi)
+                print(psi.shape)
+                loss = torch.einsum('ik, kr, jr -> ', psi, weighting_matrix, psi) / x[0].shape[0]**2
                 loss.backward()
                 return loss
             optimizer.step(closure)
@@ -52,13 +52,17 @@ class GMM(AbstractEstimationMethod):
     def _get_inverse_covariance_matrix(self, x_tensor, alpha):
         n = x_tensor[0].shape[0]
         psi = self.model.psi(x_tensor).detach().cpu().numpy()
-
+        print(psi.shape)
         q = (psi.T  @ psi) / n  # dim_psi x dim_psi matrix
+        print(q)
         l = scipy.sparse.identity(n=self.dim_psi)
         q += alpha * l
+        print(q, l)#, np.linalg.solve(q, l))
         try:
+            print(np.linalg.solve(q, l))
             return np.linalg.solve(q, l)
         except:
+            print(np.linalg.lstsq(q, l, rcond=None)[0])
             return np.linalg.lstsq(q, l, rcond=None)[0]
 
 
