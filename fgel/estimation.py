@@ -4,6 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from fgel.baselines.kernel_mmr import KernelMMR
+from fgel.baselines.least_squares import OrdinaryLeastSquares
 from fgel.default_config import methods
 
 mr_estimators = ['OLS', 'GMM', 'GEL', 'KernelEL']
@@ -13,6 +15,7 @@ cmr_estimators = ['KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'N
 def estimation(model, train_data, moment_function, estimation_method,
                estimator_kwargs=None, hyperparams=None,
                validation_data=None, val_loss_func=None,
+               normalize_moment_function=True,
                verbose=True):
     if train_data['z'] is None:
         conditional_mr = False
@@ -49,6 +52,10 @@ def estimation(model, train_data, moment_function, estimation_method,
         hyperparams_default.update(hyperparams)
     hyperparams = hyperparams_default
 
+    if normalize_moment_function:
+        model, moment_function = pretrain_model_and_renormalize_moment_function(moment_function, model, train_data,
+                                                                                conditional_mr)
+
     # Train estimator for different hyperparams and return best model (models for other hparams also stored)
     trained_model, train_statistics = optimize_hyperparams(model=model,
                                                            moment_function=moment_function,
@@ -60,6 +67,34 @@ def estimation(model, train_data, moment_function, estimation_method,
                                                            val_loss_func=val_loss_func,
                                                            verbose=verbose)
     return trained_model, train_statistics
+
+
+def pretrain_model_and_renormalize_moment_function(moment_function, model, train_data, conditional_mr):
+    """Pretrains model and normalizes entries of moment function to variance 1"""
+    if train_data['z'] is None:
+        dim_z = None
+    else:
+        dim_z = train_data['z'].shape[1]
+
+    # Eval moment function once on a single sample to get its dimension
+    dim_psi = moment_function(model(train_data['t'][0:1]), train_data['y'][0:1]).shape[1]
+
+    model_wrapper = ModelWrapper(model=copy.deepcopy(model),
+                                 moment_function=moment_function,
+                                 dim_psi=dim_psi, dim_z=dim_z)
+
+    if conditional_mr:
+        estimator = KernelMMR(model=model_wrapper)
+    else:
+        estimator = OrdinaryLeastSquares(model=model_wrapper)
+    estimator.train(x_train=[train_data['t'], train_data['y']], z_train=train_data['z'], x_val=None, z_val=None)
+    pretrained_model = estimator.model
+    normalization = torch.Tensor(np.std(moment_function(pretrained_model(train_data['t']), train_data['y']).detach().numpy(), axis=0))
+
+    def moment_function_normalized(model_evaluation, y):
+        return moment_function(model_evaluation, y) / normalization
+
+    return pretrained_model, moment_function_normalized
 
 
 def iterate_argument_combinations(argument_dict):

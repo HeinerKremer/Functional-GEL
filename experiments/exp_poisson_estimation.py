@@ -37,23 +37,23 @@ class PoissonExperiment(AbstractExperiment):
 if __name__ == '__main__':
     from fgel.estimation import estimation
 
-    np.random.seed(12345)
+    np.random.seed(123485)
     torch.random.manual_seed(12345)
+    for i in range(10):
+        exp = PoissonExperiment(poisson_param=52)
+        exp.prepare_dataset(n_train=1000, n_val=1000, n_test=1000)
+        model = exp.init_model()
 
-    exp = PoissonExperiment(poisson_param=5)
-    exp.prepare_dataset(n_train=10, n_val=100, n_test=1000)
-    model = exp.init_model()
+        print(np.mean(exp.moment_function(model(), exp.train_data['y']).detach().numpy(), axis=0))
 
-    print(np.mean(exp.moment_function(model(), exp.train_data['y']).detach().numpy(), axis=0))
-
-    trained_model, stats = estimation(model=model,
-                                      train_data=exp.train_data,
-                                      moment_function=exp.moment_function,
-                                      estimation_method='GEL',
-                                      estimator_kwargs=None, hyperparams=None,
-                                      validation_data=exp.val_data, val_loss_func=exp.validation_loss,
-                                      verbose=True
-                                      )
+        trained_model, stats = estimation(model=model,
+                                          train_data=exp.train_data,
+                                          moment_function=exp.moment_function,
+                                          estimation_method='GEL',
+                                          estimator_kwargs={'dual_optim': 'lbfgs'}, hyperparams={'divergence': ['kl']},
+                                          validation_data=exp.val_data, val_loss_func=exp.validation_loss,
+                                          verbose=True
+                                          )
 
     print(f'True param: {exp.poisson_param} \n'
           f'Param estimate: {np.squeeze(trained_model.get_parameters())} \n'

@@ -72,8 +72,8 @@ class Parameter(nn.Module):
     def forward(self, data=None):
         return self.params
 
-    def parameters(self, recourse=True):
-        return [self.params]
+    # def parameters(self, recourse=True):
+    #     return [self.params]
 
     def init_params(self):
         if self.shape is None:
@@ -82,6 +82,16 @@ class Parameter(nn.Module):
         else:
             start_val = torch.Tensor([1/self.shape[0]]) * torch.ones(self.shape, dtype=torch.float32)
         self.params = torch.nn.Parameter(start_val, requires_grad=True)
+
+    def get_parameters(self):
+        param_tensor = list(self.parameters())
+        return [p.detach().numpy() for p in param_tensor]
+
+    def is_finite(self):
+        params = self.get_parameters()
+        isnan = sum([np.sum(np.isnan(p)) for p in params])
+        isfinite = sum([np.sum(np.isfinite(p)) for p in params])
+        return (not isnan) and isfinite
 
     def project_simplex_constraint(self):
         params = self.params.detach().numpy()

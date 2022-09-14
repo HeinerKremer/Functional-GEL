@@ -54,7 +54,8 @@ methods = {
                 "theta_optim": 'lbfgs',
                 "eval_freq": 100,
                 "max_num_epochs": 20000,},
-            'hyperparams': {"divergence": ['chi2', 'kl', 'log'],}
+            'hyperparams': {"divergence": ['chi2', 'kl', 'log'],
+                            "reg_param": [0, 1e-6]}
         },
 
     'KernelMMR':
