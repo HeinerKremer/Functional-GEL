@@ -14,7 +14,6 @@ class NeuralFGEL(GeneralizedEL):
         self.dual_func_network_kwargs = self._update_default_dual_func_network_kwargs(dual_func_network_kwargs)
 
         self.batch_training = True
-        self.optimize_step = self._gradient_descent_ascent_step
 
     def _init_dual_params(self):
         self.dual_moment_func = ModularMLPModel(**self.dual_func_network_kwargs)

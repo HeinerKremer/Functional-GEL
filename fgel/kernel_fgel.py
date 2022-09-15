@@ -65,7 +65,7 @@ class KernelFGEL(GeneralizedEL):
 
 if __name__ == '__main__':
     from experiments.tests import test_cmr_estimator
-    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=2, hyperparams={'divergence': ['chi2']})
-    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=2, hyperparams={'divergence': ['kl']})
-    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=2, hyperparams={'divergence': ['log']})
+    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=1, n_train=100, hyperparams={'divergence': ['chi2']})
+    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=1, n_train=100, hyperparams={'divergence': ['kl']})
+    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=1, n_train=100, hyperparams={'divergence': ['log']})
 

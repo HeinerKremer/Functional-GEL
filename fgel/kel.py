@@ -9,7 +9,7 @@ from fgel.generalized_el import GeneralizedEL
 cvx_solver = cvx.MOSEK
 
 
-class MMDEL(GeneralizedEL):
+class KernelEL(GeneralizedEL):
     """
     Maximum mean discrepancy empirical likelihood estimator for unconditional moment restrictions.
     """
@@ -27,8 +27,8 @@ class MMDEL(GeneralizedEL):
     def _set_kernel_x(self, x, x_val=None):
         # Use product kernels for now (TAKE CARE WHEN IMPLEMENTING SOMETHING WITH ONLY T NO Y)
         if self.kernel_x is None and x is not None:
-            self.kernel_x = get_rbf_kernel(x[0], x[0], **self.kernel_x_kwargs).type(torch.float32) * \
-                            get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32)
+            self.kernel_x = get_rbf_kernel(x[0], x[0], **self.kernel_x_kwargs).type(torch.float32) # * \
+                            # get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32)
             k_cholesky = torch.tensor(np.transpose(compute_cholesky_factor(self.kernel_x.detach().numpy())))
             self.kernel_x_cholesky = k_cholesky
 
@@ -55,11 +55,14 @@ class MMDEL(GeneralizedEL):
         return gel_function
 
     """------------- Objective of MMD-GEL ------------"""
+    def eval_dual_moment_func(self, z):
+        return self.dual_moment_func.params
+
     def objective(self, x, z, *args, **kwargs):
         expected_rkhs_func = torch.mean(torch.einsum('ij, ik -> k', self.rkhs_func.params, self.kernel_x))
         rkhs_norm_sq = torch.einsum('ir, ij, jr ->', self.rkhs_func.params, self.kernel_x, self.rkhs_func.params)
         exponent = (torch.einsum('ij, ik -> k', self.rkhs_func.params, self.kernel_x) + self.dual_normalization.params
-                    - torch.einsum('ij, ij -> i', self.dual_moment_func.params, self.model.psi(x)))
+                    - torch.einsum('ik, ik -> i', self.eval_dual_moment_func(z), self.model.psi(x)))
         objective = (expected_rkhs_func + self.dual_normalization.params - 1 / 2 * rkhs_norm_sq
                      - self.kl_reg_param * torch.mean(torch.exp(1 / self.kl_reg_param * exponent)))
         return objective, -objective

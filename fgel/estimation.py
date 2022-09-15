@@ -9,7 +9,7 @@ from fgel.baselines.least_squares import OrdinaryLeastSquares
 from fgel.default_config import methods
 
 mr_estimators = ['OLS', 'GMM', 'GEL', 'KernelEL']
-cmr_estimators = ['KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'NeuralFGEL']
+cmr_estimators = ['KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'NeuralFGEL', 'KernelELKernel', 'KernelELNeural']
 
 
 def estimation(model, train_data, moment_function, estimation_method,

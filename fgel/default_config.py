@@ -8,8 +8,10 @@ from fgel.baselines.gmm import GMM
 from fgel.baselines.neural_vmm import NeuralVMM
 from fgel.baselines.sieve_minimum_distance import SMDIdentity, SMDHeteroskedastic
 from fgel.generalized_el import GeneralizedEL
+from fgel.kel_kernel import KernelELKernel
+from fgel.kel_neural import KernelELNeural
 from fgel.kernel_fgel import KernelFGEL
-from fgel.mmd_gel import MMDEL
+from fgel.kel import KernelEL
 from fgel.neural_fgel import NeuralFGEL
 
 
@@ -113,20 +115,47 @@ methods = {
                 "burn_in_cycles": 5,
                 "eval_freq": 100,
                 "max_no_improve": 3,},
-        'hyperparams': {"reg_param": [0, 1e-4, 1e-2, 1e0],
-                        "divergence": ['chi2', 'kl', 'log'],
+            'hyperparams': {"reg_param": [0, 1e-4, 1e-2, 1e0],
+                            "divergence": ['chi2', 'kl', 'log'],
                         }
         },
 
     'KernelEL':
         {
-            'estimator_class': MMDEL,
+            'estimator_class': KernelEL,
             'estimator_kwargs': {
                 "dual_optim": 'oadam_gda',
                 "theta_optim": 'oadam_gda',
                 "eval_freq": 100,
                 "max_num_epochs": 20000,},
-        'hyperparams': {'kl_reg_param': [1e5, 1e4, 1e3, 1e2, 1e1, 1e0, 1e-1, 1e-2, 1e-3]}
+            'hyperparams': {'kl_reg_param': [1e5, 1e4, 1e3, 1e2, 1e1, 1e0, 1e-1, 1e-2, 1e-3]}
+        },
+
+    'KernelELKernel':
+        {
+            'estimator_class': KernelELKernel,
+            'estimator_kwargs': {
+                "dual_optim": 'oadam_gda',
+                "theta_optim": 'oadam_gda',
+                "eval_freq": 100,
+                "max_num_epochs": 20000,},
+            'hyperparams': {'kl_reg_param': [1e0],
+                            'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8],
+                        }
+        },
+
+    'KernelELNeural':
+        {
+            'estimator_class': KernelELNeural,
+            'estimator_kwargs': {
+                "batch_size": 200,
+                "max_num_epochs": 20000,
+                "burn_in_cycles": 5,
+                "eval_freq": 100,
+                "max_no_improve": 3,},
+            'hyperparams': {'kl_reg_param': [1e1, 1e0, 1e-1],
+                            "reg_param": [0, 1e-4, 1e-2, 1e0],
+                        }
         },
 
 }
