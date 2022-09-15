@@ -8,8 +8,8 @@ from fgel.baselines.gmm import GMM
 from fgel.baselines.neural_vmm import NeuralVMM
 from fgel.baselines.sieve_minimum_distance import SMDIdentity, SMDHeteroskedastic
 from fgel.generalized_el import GeneralizedEL
-from fgel.kel_kernel import KernelELKernel
-from fgel.kel_neural import KernelELNeural
+from fgel.kernel_kel import KernelELKernel
+from fgel.neural_kel import KernelELNeural
 from fgel.kernel_fgel import KernelFGEL
 from fgel.kel import KernelEL
 from fgel.neural_fgel import NeuralFGEL

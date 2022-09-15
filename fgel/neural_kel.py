@@ -10,9 +10,6 @@ cvx_solver = cvx.MOSEK
 
 
 class KernelELNeural(KernelEL):
-    """
-    Maximum mean discrepancy empirical likelihood estimator for unconditional moment restrictions.
-    """
 
     def __init__(self, model, reg_param, batch_size=200, dual_func_network_kwargs=None, **kwargs):
         super().__init__(model=model, theta_optim='oadam_gda', **kwargs)
@@ -39,7 +36,7 @@ class KernelELNeural(KernelEL):
             dual_func_network_kwargs_default.update(dual_func_network_kwargs)
         return dual_func_network_kwargs_default
 
-    """------------- Objective of Kernel-EL-kernel ------------"""
+    """------------- Objective of Kernel-EL-Neural ------------"""
     def eval_dual_moment_func(self, z):
         return self.dual_moment_func(z)
 

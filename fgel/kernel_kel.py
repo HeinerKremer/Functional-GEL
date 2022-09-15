@@ -10,9 +10,6 @@ cvx_solver = cvx.MOSEK
 
 
 class KernelELKernel(KernelEL):
-    """
-    Maximum mean discrepancy empirical likelihood estimator for unconditional moment restrictions.
-    """
 
     def __init__(self, reg_param, **kwargs):
         super().__init__(**kwargs)
@@ -24,7 +21,7 @@ class KernelELKernel(KernelEL):
         self.dual_normalization = Parameter(shape=(1, 1))
         self.all_dual_params = list(self.dual_moment_func.parameters()) + list(self.dual_normalization.parameters()) + list(self.rkhs_func.parameters())
 
-    """------------- Objective of Kernel-EL-kernel ------------"""
+    """------------- Objective of Kernel-EL-Kernel ------------"""
     def eval_dual_moment_func(self, z):
         return torch.einsum('ij, ik -> kj', self.dual_moment_func.params, self.kernel_z)
 
