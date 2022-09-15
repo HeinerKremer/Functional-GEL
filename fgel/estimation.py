@@ -77,7 +77,7 @@ def pretrain_model_and_renormalize_moment_function(moment_function, model, train
         dim_z = train_data['z'].shape[1]
 
     # Eval moment function once on a single sample to get its dimension
-    dim_psi = moment_function(model(train_data['t'][0:1]), train_data['y'][0:1]).shape[1]
+    dim_psi = moment_function(model(train_data['t'][0:1]), torch.Tensor(train_data['y'][0:1])).shape[1]
 
     model_wrapper = ModelWrapper(model=copy.deepcopy(model),
                                  moment_function=moment_function,
@@ -89,7 +89,7 @@ def pretrain_model_and_renormalize_moment_function(moment_function, model, train
         estimator = OrdinaryLeastSquares(model=model_wrapper)
     estimator.train(x_train=[train_data['t'], train_data['y']], z_train=train_data['z'], x_val=None, z_val=None)
     pretrained_model = estimator.model
-    normalization = torch.Tensor(np.std(moment_function(pretrained_model(train_data['t']), train_data['y']).detach().numpy(), axis=0))
+    normalization = torch.Tensor(np.std(moment_function(pretrained_model(train_data['t']), torch.Tensor(train_data['y'])).detach().numpy(), axis=0))
 
     def moment_function_normalized(model_evaluation, y):
         return moment_function(model_evaluation, y) / normalization
@@ -128,7 +128,7 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
         dim_z = z_train.shape[1]
 
     # Eval moment function once on a single sample to get its dimension
-    dim_psi = moment_function(model(x_train[0][0:1]), x_train[1][0:1]).shape[1]
+    dim_psi = moment_function(model(x_train[0][0:1]), torch.Tensor(x_train[1][0:1])).shape[1]
 
     models = []
     hparams = []
@@ -224,6 +224,12 @@ class ModelWrapper(nn.Module):
         isnan = sum([np.sum(np.isnan(p)) for p in params])
         isfinite = sum([np.sum(np.isfinite(p)) for p in params])
         return (not isnan) and isfinite
+
+    def initialize(self):
+        try:
+            self.model.initialize()
+        except AttributeError:
+            pass
 
 
 if __name__ == "__main__":

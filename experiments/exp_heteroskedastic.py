@@ -52,7 +52,6 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
         else:
             error1 = np.random.normal(0, self.noise, [num_data, 1])
         y = eval_model(t, self.theta0, numpy=True) + error1
-        print(np.shape(y))
         return {'t': t, 'y': y, 'z': t}
 
     def get_true_parameters(self):
@@ -66,24 +65,6 @@ class HeteroskedasticNoiseExperiment(AbstractExperiment):
 
     def validation_loss(self, model, val_data):
         return self.eval_risk(model, val_data)
-
-
-def test_estimator(estimation_method):
-    from fgel.estimation import estimation
-    exp = HeteroskedasticNoiseExperiment(theta=[1.4, 2.0], noise=2.0, heteroskedastic=True)
-    exp.prepare_dataset(n_train=200, n_val=2000, n_test=20000)
-    model = exp.init_model()
-    trained_model, stats = estimation(model=model,
-                                      train_data=exp.train_data,
-                                      moment_function=exp.moment_function,
-                                      estimation_method=estimation_method,
-                                      estimator_kwargs=None, hyperparams=None,
-                                      validation_data=exp.val_data, val_loss_func=exp.validation_loss,
-                                      verbose=True
-                                      )
-    print(f'True parameter: {exp.theta0},\n'
-          f'Parameter estimate: {trained_model.get_parameters()} \n'
-          f'MSE: {np.mean(np.square(np.squeeze(trained_model.get_parameters()) - exp.theta0))}')
 
 
 if __name__ == '__main__':

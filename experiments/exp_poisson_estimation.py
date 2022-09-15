@@ -41,7 +41,7 @@ if __name__ == '__main__':
     torch.random.manual_seed(12345)
     for i in range(10):
         exp = PoissonExperiment(poisson_param=52)
-        exp.prepare_dataset(n_train=1000, n_val=1000, n_test=1000)
+        exp.prepare_dataset(n_train=10000, n_val=1000, n_test=1000)
         model = exp.init_model()
 
         print(np.mean(exp.moment_function(model(), exp.train_data['y']).detach().numpy(), axis=0))
@@ -50,7 +50,7 @@ if __name__ == '__main__':
                                           train_data=exp.train_data,
                                           moment_function=exp.moment_function,
                                           estimation_method='GEL',
-                                          estimator_kwargs={'dual_optim': 'lbfgs'}, hyperparams={'divergence': ['kl']},
+                                          estimator_kwargs={'dual_optim': 'lbfgs'}, hyperparams={'divergence': ['chi2']},
                                           validation_data=exp.val_data, val_loss_func=exp.validation_loss,
                                           verbose=True
                                           )

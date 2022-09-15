@@ -196,9 +196,5 @@ class SMDHeteroskedastic(SMDIdentity):
 
 
 if __name__ == '__main__':
-    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
-
-    estimatorkwargs = {"dim_z": 1}
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=20,
-                                         estimatortype=SMDIdentity, estimatorkwargs=estimatorkwargs)
-    print('Thetas: ', results['theta'])
+    from experiments.tests import test_cmr_estimator
+    test_cmr_estimator(estimation_method='SMD', n_runs=2)

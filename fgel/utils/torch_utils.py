@@ -175,3 +175,13 @@ class ModularMLPModel(nn.Module):
         num_data = data.shape[0]
         data = data.view(num_data, -1)
         return self.model(data)
+
+    def get_parameters(self):
+        param_tensor = list(self.model.parameters())
+        return [p.detach().numpy() for p in param_tensor]
+    
+    def is_finite(self):
+        params = self.get_parameters()
+        isnan = sum([np.sum(np.isnan(p)) for p in params])
+        isfinite = sum([np.sum(np.isfinite(p)) for p in params])
+        return (not isnan) and isfinite

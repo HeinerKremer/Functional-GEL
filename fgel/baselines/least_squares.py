@@ -25,8 +25,6 @@ class OrdinaryLeastSquares(AbstractEstimationMethod):
 
 
 if __name__ == '__main__':
-    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
-
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=20,
-                                         estimatortype=OrdinaryLeastSquares)
-    print('Thetas: ', results['theta'])
+    from experiments.tests import test_mr_estimator, test_cmr_estimator
+    test_mr_estimator(estimation_method='OLS', n_runs=2)
+    test_cmr_estimator(estimation_method='OLS', n_runs=2)

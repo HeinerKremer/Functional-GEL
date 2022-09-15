@@ -64,11 +64,8 @@ class KernelFGEL(GeneralizedEL):
 
 
 if __name__ == '__main__':
-    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
+    from experiments.tests import test_cmr_estimator
+    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=2, hyperparams={'divergence': ['chi2']})
+    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=2, hyperparams={'divergence': ['kl']})
+    test_cmr_estimator(estimation_method='KernelFGEL', n_runs=2, hyperparams={'divergence': ['log']})
 
-    estimatorkwargs = dict(divergence='log', theta_optim='lbfgs', dual_optim='lbfgs',
-                           max_num_epochs=50000, eval_freq=2000, pretrain=True)
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=200, repititions=10,
-                                          estimatortype=KernelFGEL, estimatorkwargs=estimatorkwargs)
-    print('Thetas: ', results['theta'])
-    print('Train risk: ', results['train_risk'])

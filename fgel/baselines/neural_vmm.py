@@ -33,9 +33,5 @@ class NeuralVMM(NeuralFGEL):
 
 
 if __name__ == "__main__":
-    from experiments.exp_heteroskedastic import run_heteroskedastic_n_times
-
-    estimatorkwargs = dict(max_num_epochs=50000, eval_freq=2000,)
-    results = run_heteroskedastic_n_times(theta=1.7, noise=1.0, n_train=2000, repititions=2,
-                                          estimatortype=NeuralVMM, estimatorkwargs=estimatorkwargs)
-    print('Thetas: ', results['theta'])
+    from experiments.tests import test_cmr_estimator
+    test_cmr_estimator(estimation_method='NeuralVMM', n_runs=2)
