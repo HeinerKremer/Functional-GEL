@@ -388,4 +388,4 @@ class GeneralizedEL(AbstractEstimationMethod):
 
 if __name__ == '__main__':
     from experiments.tests import test_mr_estimator
-    test_mr_estimator(estimation_method='GEL', n_runs=5, n_train=1000)
+    test_mr_estimator(estimation_method='GEL', n_runs=5, n_train=2000)

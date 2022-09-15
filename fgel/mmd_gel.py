@@ -107,4 +107,4 @@ class MMDEL(GeneralizedEL):
 
 if __name__ == '__main__':
     from experiments.tests import test_mr_estimator
-    test_mr_estimator(estimation_method='KernelEL', n_runs=5, n_train=100, hyperparams={'kl_reg_param': [1.0]})
+    test_mr_estimator(estimation_method='KernelEL', n_runs=5, n_train=2000, hyperparams=None)
