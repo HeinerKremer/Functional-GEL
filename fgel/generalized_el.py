@@ -27,7 +27,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                  theta_optim=None, theta_optim_args=None, pretrain=True,
                  dual_optim=None, dual_optim_args=None, inneriters=None,
                  divergence=None, kernel_z_kwargs=None,
-                 verbose=False):
+                 verbose=2):
         super().__init__(model=model, kernel_z_kwargs=kernel_z_kwargs)
 
         if theta_optim_args is None:
@@ -65,6 +65,11 @@ class GeneralizedEL(AbstractEstimationMethod):
     def _init_dual_params(self):
         self.dual_moment_func = Parameter(shape=(1, self.dim_psi))
         self.all_dual_params = list(self.dual_moment_func.parameters())
+
+    def are_dual_params_finite(self):
+        isnan = bool(sum([np.sum(np.isnan(p.detach().numpy())) for p in self.all_dual_params]))
+        isinf = bool(sum([np.sum(np.isinf(p.detach().numpy())) for p in self.all_dual_params]))
+        return (not isnan) and (not isinf)
 
     def _set_divergence_function(self):
         if self.divergence_type == 'log':
@@ -278,7 +283,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             problem = cvx.Problem(cvx.Maximize(objective), constraint)
             problem.solve(solver=cvx_solver, verbose=False)
             self.dual_moment_func.update_params(dual_func.value)
-            if not self.dual_moment_func.is_finite():
+            if not self.are_dual_params_finite():
                 raise RuntimeError('Dual variables are NaN or inf.')
         return
 
@@ -289,7 +294,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             _, loss_dual_func = self.objective(x_tensor, z_tensor)
             if loss_dual_func.requires_grad:
                 loss_dual_func.backward()
-            if not self.dual_moment_func.is_finite():
+            if not self.are_dual_params_finite():
                 raise RuntimeError('Dual variables are NaN or inf.')
             return loss_dual_func
 
@@ -303,7 +308,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             _, loss_dual_func = self.objective(x_tensor, z_tensor)
             loss_dual_func.backward()
             self.dual_func_optimizer.step()
-            if not self.dual_moment_func.is_finite():
+            if not self.are_dual_params_finite():
                 raise RuntimeError('Dual variables are NaN or inf.')
             return loss_dual_func
         """---------------------------------------------------------------------------------------------------------"""
@@ -362,7 +367,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                 if self.verbose:
                     val_theta_obj, _ = self.objective(x_val_tensor, z_val_tensor)
                     print("epoch %d, theta-obj=%f, val-mmr-loss=%f"
-                          % (epoch_i, val_theta_obj.detach().numpy(), val_loss.detach().numpy()))
+                          % (epoch_i, val_theta_obj.detach().numpy(), val_loss))
                 mmr.append(float(val_loss))
                 if val_loss < min_val_loss:
                     min_val_loss = val_loss
@@ -383,4 +388,4 @@ class GeneralizedEL(AbstractEstimationMethod):
 
 if __name__ == '__main__':
     from experiments.tests import test_mr_estimator
-    test_mr_estimator(estimation_method='GEL')
+    test_mr_estimator(estimation_method='GEL', n_runs=5, n_train=1000)

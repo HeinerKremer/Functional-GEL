@@ -2,7 +2,7 @@ import cvxpy as cvx
 import numpy as np
 import torch
 
-from fgel.utils.rkhs_utils import get_rbf_kernel
+from fgel.utils.rkhs_utils import get_rbf_kernel, compute_cholesky_factor
 from fgel.utils.torch_utils import Parameter
 from fgel.generalized_el import GeneralizedEL
 
@@ -14,7 +14,7 @@ class MMDEL(GeneralizedEL):
     Maximum mean discrepancy empirical likelihood estimator for unconditional moment restrictions.
     """
 
-    def __init__(self, kl_reg_param=1e-6, kernel_x_kwargs=None, **kwargs):
+    def __init__(self, kl_reg_param, kernel_x_kwargs=None, **kwargs):
         super().__init__(**kwargs)
         self.kl_reg_param = kl_reg_param
 
@@ -27,17 +27,22 @@ class MMDEL(GeneralizedEL):
     def _set_kernel_x(self, x, x_val=None):
         # Use product kernels for now (TAKE CARE WHEN IMPLEMENTING SOMETHING WITH ONLY T NO Y)
         if self.kernel_x is None and x is not None:
-            self.kernel_x = (get_rbf_kernel(x[0], x[0], **self.kernel_x_kwargs).type(torch.float32)
-                             * get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32))
+            self.kernel_x = get_rbf_kernel(x[0], x[0], **self.kernel_x_kwargs).type(torch.float32) * \
+                            get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32)
+            k_cholesky = torch.tensor(np.transpose(compute_cholesky_factor(self.kernel_x.detach().numpy())))
+            self.kernel_x_cholesky = k_cholesky
+
+            print('Using kernel only for t data')
+                             # * get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32))
         if x_val is not None:
             self.kernel_x_val = (get_rbf_kernel(x_val[0], x_val[0], **self.kernel_x_kwargs)
-                                 * get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32))
+                                 * get_rbf_kernel(x_val[1], x_val[1], **self.kernel_x_kwargs).type(torch.float32))
 
     def _init_dual_params(self):
         self.dual_moment_func = Parameter(shape=(1, self.dim_psi))
         self.rkhs_func = Parameter(shape=(self.kernel_x.shape[0], 1))
         self.dual_normalization = Parameter(shape=(1, 1))
-        self.dual_params = list(self.dual_moment_func.parameters()) + list(self.dual_normalization.parameters()) + list(self.rkhs_func.parameters())
+        self.all_dual_params = list(self.dual_moment_func.parameters()) + list(self.dual_normalization.parameters()) + list(self.rkhs_func.parameters())
 
     def _set_divergence_function(self):
         def divergence(weights=None, cvxpy=False):
@@ -63,8 +68,7 @@ class MMDEL(GeneralizedEL):
     def _optimize_dual_func_cvxpy(self, x_tensor, z_tensor):
         with torch.no_grad():
             x = [xi.numpy() for xi in x_tensor]
-            z = z_tensor.numpy()
-            n_sample = z.shape[0]
+            n_sample = x[0].shape[0]
 
             dual_func = cvx.Variable(shape=(1, self.dim_psi))   # (1, k)
             dual_normalization = cvx.Variable(shape=(1, 1))
@@ -75,13 +79,17 @@ class MMDEL(GeneralizedEL):
 
             dual_func_psi = psi @ cvx.transpose(dual_func)    # (n_sample, 1)
             expected_rkhs_func = 1/n_sample * cvx.sum(kernel_x @ rkhs_func)
-            rkhs_norm_sq = cvx.sum(cvx.transpose(rkhs_func) @ kernel_x @ rkhs_func)
+            rkhs_norm_sq = cvx.square(cvx.norm(cvx.transpose(rkhs_func) @ self.kernel_x_cholesky.detach().numpy())) #cvx.quad_form(rkhs_func, kernel_x)
+            objective = (expected_rkhs_func + dual_normalization - 1 / 2 * rkhs_norm_sq)
+
             exponent = cvx.sum(kernel_x @ rkhs_func + dual_normalization - dual_func_psi, axis=1)
-            objective = (expected_rkhs_func + dual_normalization - 1 / 2 * rkhs_norm_sq
-                         - self.kl_reg_param / n_sample * cvx.sum(cvx.exp(1 / self.kl_reg_param * exponent)))
+            objective += - self.kl_reg_param / n_sample * cvx.sum(cvx.exp(1 / self.kl_reg_param * exponent))
 
             problem = cvx.Problem(cvx.Maximize(objective))
-            problem.solve(solver=cvx_solver, verbose=False)
+            problem.solve(solver=cvx_solver, verbose=True)
+
+            if dual_normalization.value is None or dual_func.value is None or rkhs_func.value is None:
+                raise RuntimeError('Dual parameter optimization failed.')
 
             self.dual_moment_func.update_params(dual_func.value)
             self.rkhs_func.update_params(rkhs_func.value)
@@ -98,19 +106,5 @@ class MMDEL(GeneralizedEL):
 
 
 if __name__ == '__main__':
-
-    kl_reg_param = 1e-3
-
-    estimator_kwargs = {
-        "dual_optim": 'lbfgs',
-        "theta_optim": 'lbfgs',
-        "eval_freq": 100,
-        "max_num_epochs": 20000,
-    }
-
-    exp = HeteroskedasticNoiseExperiment(theta=[theta], noise=noise, heteroskedastic=True)
-    exp.prepare_dataset(n_train=100, n_val=100, n_test=20000)
-    model = exp.init_model()
-
-    estimator = MMDEL(model=model, kl_reg_param=kl_reg_param, **estimator_kwargs)
-
+    from experiments.tests import test_mr_estimator
+    test_mr_estimator(estimation_method='KernelEL', n_runs=5, n_train=100, hyperparams={'kl_reg_param': [1.0]})

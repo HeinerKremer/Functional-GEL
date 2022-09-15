@@ -118,7 +118,7 @@ methods = {
                         }
         },
 
-    'MMDEL':
+    'KernelEL':
         {
             'estimator_class': MMDEL,
             'estimator_kwargs': {
@@ -126,7 +126,7 @@ methods = {
                 "theta_optim": 'lbfgs',
                 "eval_freq": 100,
                 "max_num_epochs": 20000,},
-        'hyperparams': {'kl_reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8]}
+        'hyperparams': {'kl_reg_param': [1e5, 1e4, 1e3, 1e2, 1e1, 1e0, 1e-1, 1e-2, 1e-3]}
         },
 
 }
