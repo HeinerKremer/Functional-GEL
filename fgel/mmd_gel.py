@@ -33,10 +33,11 @@ class MMDEL(GeneralizedEL):
             self.kernel_x_val = (get_rbf_kernel(x_val[0], x_val[0], **self.kernel_x_kwargs)
                                  * get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32))
 
-    def _init_dual_func(self):
-        self.dual_func = Parameter(shape=(1, self.dim_psi))
+    def _init_dual_params(self):
+        self.dual_moment_func = Parameter(shape=(1, self.dim_psi))
         self.rkhs_func = Parameter(shape=(self.kernel_x.shape[0], 1))
         self.dual_normalization = Parameter(shape=(1, 1))
+        self.dual_params = list(self.dual_moment_func.parameters()) + list(self.dual_normalization.parameters()) + list(self.rkhs_func.parameters())
 
     def _set_divergence_function(self):
         def divergence(weights=None, cvxpy=False):
@@ -48,16 +49,12 @@ class MMDEL(GeneralizedEL):
             raise NotImplementedError('gel_function not used for MMD-GEL')
         return gel_function
 
-    def _set_optimizers(self):
-        dual_params = list(self.dual_func.parameters()) + list(self.dual_normalization.parameters()) + list(self.rkhs_func.parameters())
-        super()._set_optimizers(dual_params=dual_params)
-
     """------------- Objective of MMD-GEL ------------"""
     def objective(self, x, z, *args, **kwargs):
         expected_rkhs_func = torch.mean(torch.einsum('ij, ik -> k', self.rkhs_func.params, self.kernel_x))
         rkhs_norm_sq = torch.einsum('ir, ij, jr ->', self.rkhs_func.params, self.kernel_x, self.rkhs_func.params)
         exponent = (torch.einsum('ij, ik -> k', self.rkhs_func.params, self.kernel_x) + self.dual_normalization.params
-                    - torch.einsum('ij, ij -> i', self.dual_func.params, self.model.psi(x)))
+                    - torch.einsum('ij, ij -> i', self.dual_moment_func.params, self.model.psi(x)))
         objective = (expected_rkhs_func + self.dual_normalization.params - 1 / 2 * rkhs_norm_sq
                      - self.kl_reg_param * torch.mean(torch.exp(1 / self.kl_reg_param * exponent)))
         return objective, -objective
@@ -86,7 +83,7 @@ class MMDEL(GeneralizedEL):
             problem = cvx.Problem(cvx.Maximize(objective))
             problem.solve(solver=cvx_solver, verbose=False)
 
-            self.dual_func.update_params(dual_func.value)
+            self.dual_moment_func.update_params(dual_func.value)
             self.rkhs_func.update_params(rkhs_func.value)
             self.dual_normalization.update_params(dual_normalization.value)
         return
@@ -94,7 +91,7 @@ class MMDEL(GeneralizedEL):
     def _init_training(self, x_tensor, z_tensor, x_val_tensor=None, z_val_tensor=None):
         self._set_kernel_z(z_tensor, z_val_tensor)
         self._set_kernel_x(x_tensor, x_val_tensor)
-        self._init_dual_func()
+        self._init_dual_params()
         self._set_optimizers()
         if self.pretrain:
             self._pretrain_theta(x=x_tensor, z=z_tensor)

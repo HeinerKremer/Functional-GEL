@@ -11,7 +11,7 @@ class NeuralVMM(NeuralFGEL):
         self.kernel_lambda = kernel_lambda
 
     def objective(self, x, z, *args):
-        f_of_z = self.dual_func(z)
+        f_of_z = self.dual_moment_func(z)
         m_vector = (self.model.psi(x) * f_of_z).sum(1)
         moment = m_vector.mean()
         ow_reg = 0.25 * (m_vector ** 2).mean()

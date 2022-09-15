@@ -72,9 +72,6 @@ class Parameter(nn.Module):
     def forward(self, data=None):
         return self.params
 
-    # def parameters(self, recourse=True):
-    #     return [self.params]
-
     def init_params(self):
         if self.shape is None:
             assert self.n_sample is not None

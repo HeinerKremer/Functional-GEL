@@ -14,16 +14,16 @@ class KernelFGEL(GeneralizedEL):
         super().__init__(**kwargs)
         self.reg_param = reg_param
 
-    def _init_dual_func(self):
-        self.dual_func = Parameter(shape=(self.kernel_z.shape[0], self.dim_psi))
+    def _init_dual_params(self):
+        self.dual_moment_func = Parameter(shape=(self.kernel_z.shape[0], self.dim_psi))
+        self.all_dual_params = list(self.dual_moment_func.parameters())
         # self.dual_normalization = Parameter(shape=(1, 1))
-        self.params = torch.nn.Parameter(torch.zeros(size=(1, 1), dtype=torch.float32), requires_grad=True)
 
     def get_rkhs_norm(self):
-        return torch.einsum('ir, ij, jr ->', self.dual_func.params, self.kernel_z, self.dual_func.params)
+        return torch.einsum('ir, ij, jr ->', self.dual_moment_func.params, self.kernel_z, self.dual_moment_func.params)
 
     def objective(self, x, z, *args, **kwargs):
-        dual_func_k_psi = torch.einsum('jr, ji, ir -> i', self.dual_func.params, self.kernel_z, self.model.psi(x))
+        dual_func_k_psi = torch.einsum('jr, ji, ir -> i', self.dual_moment_func.params, self.kernel_z, self.model.psi(x))
         objective = torch.mean(self.gel_function(dual_func_k_psi))
         regularizer = self.reg_param/2 * torch.sqrt(self.get_rkhs_norm())
         return objective, - objective + regularizer
@@ -57,7 +57,7 @@ class KernelFGEL(GeneralizedEL):
                     constraint = []
                 problem = cvx.Problem(cvx.Maximize(objective), constraint)
                 problem.solve(solver=cvx_solver, verbose=False)
-                self.dual_func.update_params(dual_func.value)
+                self.dual_moment_func.update_params(dual_func.value)
             except:
                 print('CVXPY failed. Using old dual_func value')
         return

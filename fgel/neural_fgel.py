@@ -16,10 +16,9 @@ class NeuralFGEL(GeneralizedEL):
         self.batch_training = True
         self.optimize_step = self._gradient_descent_ascent_step
 
-    def _init_dual_func(self):
-        self.dual_func = ModularMLPModel(**self.dual_func_network_kwargs)
-        # self.dual_normalization = Parameter(shape=(1, 1))
-        # self.dual_normalization.params = torch.nn.Parameter(torch.zeros(size=(1, 1), dtype=torch.float32), requires_grad=True)
+    def _init_dual_params(self):
+        self.dual_moment_func = ModularMLPModel(**self.dual_func_network_kwargs)
+        self.all_dual_params = list(self.dual_moment_func.parameters())
 
     def _update_default_dual_func_network_kwargs(self, dual_func_network_kwargs):
         dual_func_network_kwargs_default = {
@@ -33,7 +32,7 @@ class NeuralFGEL(GeneralizedEL):
         return dual_func_network_kwargs_default
 
     def objective(self, x, z, *args):
-        hz = self.dual_func(z)
+        hz = self.dual_moment_func(z)
         h_psi = torch.einsum('ik, ik -> i', hz, self.model.psi(x))
         moment = torch.mean(self.gel_function(h_psi))
         if self.l2_lambda > 0:

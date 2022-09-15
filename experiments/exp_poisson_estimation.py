@@ -55,8 +55,8 @@ if __name__ == '__main__':
                                           verbose=True
                                           )
 
-    print(f'True param: {exp.poisson_param} \n'
-          f'Param estimate: {np.squeeze(trained_model.get_parameters())} \n'
-          f'MSE: {np.mean(np.square(np.squeeze(trained_model.get_parameters()) - exp.poisson_param))}\n'
-          f'Moment function: {np.squeeze(np.mean(exp.moment_function(trained_model(exp.train_data["t"]), exp.train_data["y"]).detach().numpy(), axis=0))}')
+        print(f'True param: {exp.poisson_param} \n'
+              f'Param estimate: {np.squeeze(trained_model.get_parameters())} \n'
+              f'MSE: {np.mean(np.square(np.squeeze(trained_model.get_parameters()) - exp.poisson_param))}\n'
+              f'Moment function: {np.squeeze(np.mean(exp.moment_function(trained_model(exp.train_data["t"]), exp.train_data["y"]).detach().numpy(), axis=0))}')
 
