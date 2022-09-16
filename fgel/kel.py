@@ -33,7 +33,6 @@ class KernelEL(GeneralizedEL):
             self.kernel_x_cholesky = k_cholesky
 
             print('Using kernel only for t data')
-                             # * get_rbf_kernel(x[1], x[1], **self.kernel_x_kwargs).type(torch.float32))
         if x_val is not None:
             self.kernel_x_val = (get_rbf_kernel(x_val[0], x_val[0], **self.kernel_x_kwargs)
                                  * get_rbf_kernel(x_val[1], x_val[1], **self.kernel_x_kwargs).type(torch.float32))

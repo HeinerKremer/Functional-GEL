@@ -7,7 +7,7 @@ import itertools
 class BatchIter(object):
     def __init__(self, num, batch_size):
         self.num = int(num)
-        self.batch_size = int(batch_size)
+        self.batch_size = min(int(batch_size), num)
         self.num_batches = self.num // self.batch_size
         if self.num % self.batch_size > 0:
             self.num_batches += 1
@@ -185,3 +185,8 @@ class ModularMLPModel(nn.Module):
         isnan = sum([np.sum(np.isnan(p)) for p in params])
         isfinite = sum([np.sum(np.isfinite(p)) for p in params])
         return (not isnan) and isfinite
+
+
+class OptimizationError(Exception):
+    def __str__(self):
+        return 'Optimization failed.'

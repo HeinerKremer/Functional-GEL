@@ -5,10 +5,11 @@ import cvxpy as cvx
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import logging
 
 from fgel.abstract_estimation_method import AbstractEstimationMethod
 from fgel.utils.oadam import OAdam
-from fgel.utils.torch_utils import Parameter, BatchIter
+from fgel.utils.torch_utils import Parameter, BatchIter, OptimizationError
 
 cvx_solver = cvx.MOSEK
 
@@ -192,8 +193,8 @@ class GeneralizedEL(AbstractEstimationMethod):
                 return self._gradient_descent_ascent_step(x_tensor=x_tensor, z_tensor=z_tensor)
             elif self.theta_optim_type in ['adam', 'oadam']:
                 return self._gradient_step_theta(x_tensor=x_tensor, z_tensor=z_tensor)
-        except RuntimeError:
-            print('RuntimeError: Primal variables are NaN or inf. No output produced.')
+        except OptimizationError:
+            logging.warning('OptimizationError: Primal variables are NaN or inf. Returning untrained model ...')
             return False
 
     def _gradient_step_theta(self, x_tensor, z_tensor, inneriters=100):
@@ -203,14 +204,14 @@ class GeneralizedEL(AbstractEstimationMethod):
         obj.backward()
         self.theta_optimizer.step()
         if not self.model.is_finite():
-            raise RuntimeError('Primal variables are NaN or inf.')
+            raise OptimizationError('Primal variables are NaN or inf.')
         return float(obj.detach().numpy())
 
     def _lbfgs_step_theta(self, x_tensor, z_tensor):
         losses = []
 
-        if not (self.model.is_finite() and self.dual_moment_func.is_finite()):
-            raise RuntimeError('Primal or dual variables are NaN or inf.')
+        if not (self.model.is_finite() and self.are_dual_params_finite()):
+            raise OptimizationError('Primal or dual variables are NaN or inf.')
 
         def closure():
             self.optimize_dual_func(x_tensor, z_tensor)
@@ -221,7 +222,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             if obj.requires_grad:
                 obj.backward()
             if not self.model.is_finite():
-                raise RuntimeError('Primal variables are NaN or inf.')
+                raise OptimizationError('Primal variables are NaN or inf.')
             return obj
 
         self.theta_optimizer.step(closure)
@@ -230,7 +231,6 @@ class GeneralizedEL(AbstractEstimationMethod):
 
     def _gradient_descent_ascent_step(self, x_tensor, z_tensor):
         theta_obj, dual_func_obj = self.objective(x_tensor, z_tensor)
-
         # update theta
         self.theta_optimizer.zero_grad()
         theta_obj.backward(retain_graph=True)
@@ -241,9 +241,9 @@ class GeneralizedEL(AbstractEstimationMethod):
         dual_func_obj.backward()
         self.dual_func_optimizer.step()
         if not self.model.is_finite():
-            raise RuntimeError('Primal variables are NaN or inf.')
-        if not self.dual_moment_func.is_finite():
-            raise RuntimeError('Dual variables are NaN or inf.')
+            raise OptimizationError('Primal variables are NaN or inf.')
+        if not self.are_dual_params_finite():
+            raise OptimizationError('Dual variables are NaN or inf.')
         return float(- dual_func_obj.detach().numpy())
 
     """--------------------- Optimization methods for dual_func ---------------------"""
@@ -259,7 +259,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                 return self._optimize_dual_func_gd(x_tensor, z_tensor, iters=iters)
             else:
                 raise NotImplementedError
-        except RuntimeError:
+        except OptimizationError:
             with torch.no_grad():
                 if self.verbose == 2:
                     print('Dual optimization failed. Retrieving previous variables ...')
@@ -284,7 +284,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             problem.solve(solver=cvx_solver, verbose=False)
             self.dual_moment_func.update_params(dual_func.value)
             if not self.are_dual_params_finite():
-                raise RuntimeError('Dual variables are NaN or inf.')
+                raise OptimizationError('Dual variables are NaN or inf.')
         return
 
     def _optimize_dual_func_lbfgs(self, x_tensor, z_tensor):
@@ -295,7 +295,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             if loss_dual_func.requires_grad:
                 loss_dual_func.backward()
             if not self.are_dual_params_finite():
-                raise RuntimeError('Dual variables are NaN or inf.')
+                raise OptimizationError('Dual variables are NaN or inf.')
             return loss_dual_func
 
         for _ in range(2):
@@ -309,7 +309,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             loss_dual_func.backward()
             self.dual_func_optimizer.step()
             if not self.are_dual_params_finite():
-                raise RuntimeError('Dual variables are NaN or inf.')
+                raise OptimizationError('Dual variables are NaN or inf.')
             return loss_dual_func
         """---------------------------------------------------------------------------------------------------------"""
 

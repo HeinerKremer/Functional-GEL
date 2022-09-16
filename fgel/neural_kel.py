@@ -17,7 +17,9 @@ class KernelELNeural(KernelEL):
         self.l2_lambda = reg_param
         self.dual_func_network_kwargs = self._update_default_dual_func_network_kwargs(dual_func_network_kwargs)
 
-        self.batch_training = True
+        # FIXME: Batch training not supported because the KDRO dual RKHS function always has shape (n_sample, 1).
+        #  Can play around with enforcing the constraint only for batches, this might be very interesting
+        self.batch_training = False
 
     def _init_dual_params(self):
         self.dual_moment_func = ModularMLPModel(**self.dual_func_network_kwargs)
@@ -51,4 +53,4 @@ class KernelELNeural(KernelEL):
 
 if __name__ == '__main__':
     from experiments.tests import test_cmr_estimator
-    test_cmr_estimator(estimation_method='KernelELNeural', n_runs=2, n_train=1000, hyperparams=None)
+    test_cmr_estimator(estimation_method='KernelELNeural', n_runs=1, n_train=300, hyperparams=None)

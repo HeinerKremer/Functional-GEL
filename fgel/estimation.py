@@ -221,9 +221,9 @@ class ModelWrapper(nn.Module):
 
     def is_finite(self):
         params = self.get_parameters()
-        isnan = sum([np.sum(np.isnan(p)) for p in params])
-        isfinite = sum([np.sum(np.isfinite(p)) for p in params])
-        return (not isnan) and isfinite
+        isnan = bool(sum([np.sum(np.isnan(p)) for p in params]))
+        isinf = bool(sum([np.sum(np.isinf(p)) for p in params]))
+        return (not isnan) and (not isinf)
 
     def initialize(self):
         try:
