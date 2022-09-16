@@ -1,3 +1,5 @@
+import torch
+
 
 class AbstractExperiment:
     def __init__(self, dim_psi, dim_theta, dim_z):
@@ -27,7 +29,7 @@ class AbstractExperiment:
         self.test_data = self.generate_data(n_test)
 
     def eval_risk(self, model, data):
-        raise NotImplementedError
+        return 0
 
     def init_model(self):
         raise NotImplementedError

@@ -1,5 +1,6 @@
 import os
-from fgel.default_config import methods
+
+from run_experiment import experiment_setups
 
 # ---------------- Cluster resources
 cpus = 16
@@ -8,15 +9,19 @@ bid = 12
 
 # ---------------- Simulation details ----------------
 experiments = [
-    ('heteroskedastic', {'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
-                         'method': [name for name in methods.keys()],
-                         'rollouts': [55],}
+    ('heteroskedastic', {'n_train': experiment_setups['heteroskedastic']['n_train'],
+                         'method': experiment_setups['heteroskedastic']["methods"],
+                         'rollouts': [20],}
      ),
-    ('network_iv', {'n_train': [2000],
-                    'method': [name for name in methods.keys()],
-                    'rollouts': [55],
+    ('network_iv', {'n_train': experiment_setups['network_iv']['n_train'],
+                    'method': experiment_setups['network_iv']["methods"],
+                    'rollouts': [20],
                     'exp_option': ['abs', 'step', 'sin', 'linear']}
-     )
+     ),
+    ('poisson', {'n_train': experiment_setups['poisson']['n_train'],
+                    'method': experiment_setups['poisson']["methods"],
+                    'rollouts': [20],}
+     ),
 ]
 
 max_parallel_rollouts = None

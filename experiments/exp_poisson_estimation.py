@@ -33,6 +33,9 @@ class PoissonExperiment(AbstractExperiment):
         moments = torch.cat([mean, variance], dim=1)
         return moments
 
+    def get_true_parameters(self):
+        return self.poisson_param
+
 
 if __name__ == '__main__':
     from fgel.estimation import estimation

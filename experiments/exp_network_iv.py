@@ -7,6 +7,11 @@ from experiments.abstract_experiment import AbstractExperiment
 from fgel.baselines.least_squares import OrdinaryLeastSquares
 
 
+methods = ['OLS', 'KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelELKernel', 'KernelELNeural',
+           'KernelFGEL-chi2', 'KernelFGEL-kl', 'KernelFGEL-log',
+           'NeuralFGEL-chi2', 'NeuralFGEL-kl', 'NeuralFGEL-log',]
+
+
 class NetworkModel(nn.Module):
     """A multilayer perceptron to approximate functions in the IV problem"""
 

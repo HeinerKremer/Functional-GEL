@@ -29,7 +29,7 @@ class GeneralizedEL(AbstractEstimationMethod):
                  dual_optim=None, dual_optim_args=None, inneriters=None,
                  divergence=None, kernel_z_kwargs=None,
                  val_loss_func=None,
-                 verbose=2):
+                 verbose=False):
         super().__init__(model=model, kernel_z_kwargs=kernel_z_kwargs, val_loss_func=val_loss_func)
 
         if theta_optim_args is None:

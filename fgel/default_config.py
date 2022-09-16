@@ -15,24 +15,6 @@ from fgel.kel import KernelEL
 from fgel.neural_fgel import NeuralFGEL
 
 
-experiments = {
-    'heteroskedastic':
-        {
-            'exp_class': HeteroskedasticNoiseExperiment,
-            'exp_params': {'theta': [1.7],
-                           'noise': 1.0,
-                           'heteroskedastic': True, },
-            'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
-        },
-
-    'network_iv':
-        {
-            'exp_class': NetworkIVExperiment,
-            'exp_params': {'ftype': None},
-            'n_train': [200],
-        },
-}
-
 methods = {
     'OLS':
         {
@@ -169,7 +151,7 @@ for divergence in ['chi2', 'kl', 'log']:
                 "eval_freq": 100,
                 "max_num_epochs": 20000,},
         'hyperparams': {'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8],
-                        "divergence": divergence,
+                        "divergence": [divergence],
                         }
         }
 
@@ -184,6 +166,6 @@ for divergence in ['chi2', 'kl', 'log']:
             "eval_freq": 100,
             "max_no_improve": 3,},
         'hyperparams': {"reg_param": [0, 1e-4, 1e-2, 1e0],
-                        "divergence": divergence,
+                        "divergence": [divergence],
                         }
         }

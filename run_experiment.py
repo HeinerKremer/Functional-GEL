@@ -8,7 +8,43 @@ import torch
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
 
+from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
+from experiments.exp_network_iv import NetworkIVExperiment
+from experiments.exp_poisson_estimation import PoissonExperiment
 from fgel.estimation import estimation
+
+
+experiment_setups = {
+    'heteroskedastic':
+        {
+            'exp_class': HeteroskedasticNoiseExperiment,
+            'exp_params': {'theta': [1.7],
+                           'noise': 1.0,
+                           'heteroskedastic': True, },
+            'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
+            'methods': ['OLS', 'KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelELKernel', 'KernelELNeural',
+                        'KernelFGEL-chi2', 'KernelFGEL-kl', 'KernelFGEL-log',
+                        'NeuralFGEL-chi2', 'NeuralFGEL-kl', 'NeuralFGEL-log',],
+        },
+
+    'network_iv':
+        {
+            'exp_class': NetworkIVExperiment,
+            'exp_params': {'ftype': ['abs', 'step', 'sin', 'linear']},
+            'n_train': [200],
+            'methods': ['OLS', 'KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelELKernel', 'KernelELNeural',
+                        'KernelFGEL-chi2', 'KernelFGEL-kl', 'KernelFGEL-log',
+                        'NeuralFGEL-chi2', 'NeuralFGEL-kl', 'NeuralFGEL-log', ],
+        },
+
+    'poisson':
+        {
+            'exp_class': PoissonExperiment,
+            'exp_params': {'poisson_param': 52},
+            'n_train': [64, 128, 256, 512, 1024, 2048, 4096],
+            'methods': ['OLS', 'GMM', 'GEL', 'KernelEL'],
+        },
+}
 
 
 def run_experiment(experiment, exp_params, n_train, estimation_method, estimator_kwargs=None,
@@ -53,6 +89,21 @@ def run_experiment(experiment, exp_params, n_train, estimation_method, estimator
     return result
 
 
+def run_parallel(experiment, exp_params, n_train, estimation_method, estimator_kwargs, hyperparams, repititions, seed0):
+    experiment_list = [copy.deepcopy(experiment) for _ in range(repititions)]
+    exp_params_list = [copy.deepcopy(exp_params) for _ in range(repititions)]
+    n_train_list = [copy.deepcopy(n_train) for _ in range(repititions)]
+    estimator_method_list = [copy.deepcopy(estimation_method) for _ in range(repititions)]
+    estimator_kwargs_list = [copy.deepcopy(estimator_kwargs) for _ in range(repititions)]
+    hyperparams_list = [copy.deepcopy(hyperparams) for _ in range(repititions)]
+    seeds = [seed0+i for i in range(repititions)]
+
+    with ProcessPoolExecutor(min(multiprocessing.cpu_count(), repititions)) as ex:
+        results = ex.map(run_experiment, experiment_list, exp_params_list, n_train_list, estimator_method_list,
+                         estimator_kwargs_list, hyperparams_list, seeds)
+    return results
+
+
 def run_experiment_repeated(experiment, exp_params, n_train, estimation_method, estimator_kwargs=None, hyperparams=None,
                             repititions=2, seed0=12345, parallel=True, filename=None):
     """
@@ -72,48 +123,43 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimation_method, 
                                    hyperparams=hyperparams, seed0=seed0+i)
             results.append(stats)
 
+    results_summarized = summarize_results(results)
+    result_dict = {"results_summarized": results_summarized, "results": results}
     if filename is not None:
-        if estimation_method.split('-')[-1] in {'chi2', 'kl', 'log'} or 'divergence' in {hyperparams}:
-            divergence = f'-{hyperparams["divergence"]}'
-        else:
-            divergence = ""
-        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={estimation_method}{divergence}_n={n_train}"
+        prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={estimation_method}_n={n_train}"
         os.makedirs(os.path.dirname(prefix), exist_ok=True)
         print('Filepath: ', prefix + str(filename) + ".json")
         with open(prefix + filename + ".json", "w") as fp:
-            json.dump(results, fp)
-    return results
+            json.dump(result_dict, fp)
+    return result_dict
 
 
-def run_parallel(experiment, exp_params, n_train, estimation_method, estimator_kwargs, hyperparams, repititions, seed0):
-    experiment_list = [copy.deepcopy(experiment) for _ in range(repititions)]
-    exp_params_list = [copy.deepcopy(exp_params) for _ in range(repititions)]
-    n_train_list = [copy.deepcopy(n_train) for _ in range(repititions)]
-    estimator_method_list = [copy.deepcopy(estimation_method) for _ in range(repititions)]
-    estimator_kwargs_list = [copy.deepcopy(estimator_kwargs) for _ in range(repititions)]
-    hyperparams_list = [copy.deepcopy(hyperparams) for _ in range(repititions)]
-    seeds = [seed0+i for i in range(repititions)]
-
-    with ProcessPoolExecutor(min(multiprocessing.cpu_count(), repititions)) as ex:
-        results = ex.map(run_experiment, experiment_list, exp_params_list, n_train_list, estimator_method_list,
-                         estimator_kwargs_list, hyperparams_list, seeds)
-    return results
+def summarize_results(result_list):
+    risks, mses = [], []
+    for res in result_list:
+        risks.append(res['test_risk_optim'])
+        mses.append(res['parameter_mse_optim'])
+    mean_risk = np.mean(risks)
+    mean_mse = np.mean(mses)
+    std_risk = np.std(risks)
+    std_mse = np.std(mses)
+    results_summarized = {"mean_risk": mean_risk, "std_risk": std_risk, "mean_mse": mean_mse, "std_mse": std_mse}
+    return results_summarized
 
 
 if __name__ == "__main__":
-    from fgel.default_config import experiments
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_sequential', action='store_true')
     parser.add_argument('--experiment', type=str, default='heteroskedastic')
     parser.add_argument('--exp_option', default=None)
     parser.add_argument('--n_train', type=int, default=100)
     parser.add_argument('--method', type=str, default='KernelFGEL')
+    parser.add_argument('--method_option', default=None)
     parser.add_argument('--rollouts', type=int, default=2)
 
     args = parser.parse_args()
 
-    exp_info = experiments[args.experiment]
+    exp_info = experiment_setups[args.experiment]
 
     if args.exp_option is not None:
         exp_info['exp_params'] = {list(exp_info['exp_params'].keys())[0]: args.exp_option}
@@ -128,4 +174,4 @@ if __name__ == "__main__":
                                       repititions=args.rollouts,
                                       parallel=not args.run_sequential,
                                       filename=filename)
-    print(results)
+    print(results['results_summarized'])
