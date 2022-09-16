@@ -157,7 +157,7 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
     best_hparams = hparams[best_val]
     if verbose:
         print('Best hyperparams: ', best_hparams)
-    return models[best_val], {'models': models, 'val_loss': validation_loss, 'hparams': hparams, 'best_hparams': best_hparams,
+    return models[best_val], {'models': models, 'val_loss': validation_loss, 'hyperparam': hparams,
                               'best_index': int(best_val)}
 
 
