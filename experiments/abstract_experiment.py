@@ -8,13 +8,15 @@ class AbstractExperiment:
         self.val_data = None
         self.test_data = None
 
-        # If no validation loss func with signature `validation_loss(self, model, val_data) -> float` is defined the
-        # estimators automatically use MMR for conditional moment restrictions and \|psi\|^2 for unconditional MR
-        self.validation_loss = None
+    def get_true_parameters(self):
+        """If method not specified with signature `get_true_parameters(self) -> np.array` then assume there are no true
+         parameters and the model we want to train is non-parametric or a NN"""
+        return None
 
-        # If method not specified with signature `get_true_parameters(self) -> np.array` then assume there are no
-        # true parameters and the model we want to train is non-parametric or a NN
-        self.get_true_parameters = None
+    def validation_loss(self, model, val_data):
+        """If no validation loss func with signature `validation_loss(self, model, val_data) -> float` is defined the
+        # estimators automatically use MMR for conditional moment restrictions and \|psi\|^2 for unconditional MR"""
+        return None
 
     def generate_data(self, num_data):
         raise NotImplementedError

@@ -11,8 +11,8 @@ from fgel.utils.torch_utils import torch_softplus, BatchIter
 
 class SMDIdentity(AbstractEstimationMethod):
     # Implements SMD algorithm using LBFGS optimizer and identity omega
-    def __init__(self, model, num_knots=5, polyn_degree=2):
-        AbstractEstimationMethod.__init__(self, model)
+    def __init__(self, model, num_knots=5, polyn_degree=2, **kwargs):
+        super().__init__(model=model, **kwargs)
         self.basis = MultiOutputPolynomialSplineBasis(z_dim=self.model.dim_z, num_out=self.dim_psi,
                                                       num_knots=num_knots, degree=polyn_degree)
 

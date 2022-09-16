@@ -340,7 +340,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             eval_freq_epochs = self.eval_freq
 
         self._init_training(x_tensor, z_tensor)
-        mmr = []
+        val_losses = []
 
         min_val_loss = float("inf")
         time_0 = time.time()
@@ -366,9 +366,10 @@ class GeneralizedEL(AbstractEstimationMethod):
                 cycle_num += 1
                 val_loss = self.calc_validation_metric(x_val, z_val)
                 if self.verbose:
+                    last_obj = obj[-1] if isinstance(obj, list) else obj
                     print("epoch %d, theta-obj=%f, val-loss=%f"
-                          % (epoch_i, obj, val_loss))
-                mmr.append(float(val_loss))
+                          % (epoch_i, last_obj, val_loss))
+                val_losses.append(float(val_loss))
                 if val_loss < min_val_loss:
                     min_val_loss = val_loss
                     num_no_improve = 0
@@ -380,7 +381,7 @@ class GeneralizedEL(AbstractEstimationMethod):
             print("time taken:", time.time() - time_0)
         if debugging:
             try:
-                plt.plot(mmr)
+                plt.plot(val_losses)
                 plt.show()
             except:
                 pass

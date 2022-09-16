@@ -4,12 +4,11 @@ import numpy as np
 
 
 class OrdinaryLeastSquares(AbstractEstimationMethod):
-    def __init__(self, model):
-        AbstractEstimationMethod.__init__(self, model)
+    def __init__(self, model, **kwargs):
+        super().__init__(model, **kwargs)
 
-    def _train_internal(self, x, z, x_dev, z_dev, debugging):
+    def _train_internal(self, x, z, x_val, z_val, debugging):
         x_tensor = self._to_tensor(x)
-        z_tensor = self._to_tensor(z)
         n_sample = x_tensor[0].shape[0]
 
         optimizer = torch.optim.LBFGS(self.model.parameters(),

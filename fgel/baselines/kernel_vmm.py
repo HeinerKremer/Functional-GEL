@@ -6,8 +6,8 @@ from fgel.abstract_estimation_method import AbstractEstimationMethod
 
 
 class KernelVMM(AbstractEstimationMethod):
-    def __init__(self, model, alpha, kernel_z_kwargs=None, num_iter=2, verbose=False):
-        AbstractEstimationMethod.__init__(self, model, kernel_z_kwargs)
+    def __init__(self, model, alpha, kernel_z_kwargs=None, num_iter=2, verbose=False, **kwargs):
+        super().__init__(model=model, kernel_z_kwargs=kernel_z_kwargs, **kwargs)
         self.alpha = alpha
         self.num_iter = num_iter
         self.verbose = verbose

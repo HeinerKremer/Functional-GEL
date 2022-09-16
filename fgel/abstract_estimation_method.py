@@ -55,9 +55,11 @@ class AbstractEstimationMethod:
         return float(mse_moment_violation.detach().numpy())
 
     def calc_validation_metric(self, x_val, z_val):
-        if self.val_loss_func is not None:
-            val_data = {'t': x_val[0], 'y': x_val[1], 'z': z_val}
-            return self.val_loss_func(self.model, val_data)
+        val_data = {'t': x_val[0], 'y': x_val[1], 'z': z_val}
+        val_loss = self.val_loss_func(self.model, val_data)
+
+        if val_loss is not None:
+            return val_loss
         elif z_val is None:
             return self._calc_val_moment_violation(x_val)
         else:
@@ -66,7 +68,7 @@ class AbstractEstimationMethod:
     def _to_tensor(self, data_array):
         return np_to_tensor(data_array)
 
-    def _train_internal(self, x, z, x_dev, z_dev, debugging):
+    def _train_internal(self, x, z, x_val, z_val, debugging):
         raise NotImplementedError()
 
     def _pretrain_theta(self, x, z, mmr=True):

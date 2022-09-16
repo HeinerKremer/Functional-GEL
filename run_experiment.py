@@ -38,7 +38,7 @@ def run_experiment(experiment, exp_params, n_train, estimation_method, estimator
     # Evaluate test metrics for all models (independent of hyperparam search)
     for model in full_results['models']:
         test_risks.append(float(exp.eval_risk(model, exp.test_data)))
-        if exp.get_true_parameters is not None:
+        if exp.get_true_parameters() is not None:
             parameter_mses.append(float(np.mean(np.square(np.squeeze(model.get_parameters()) - np.squeeze(exp.get_true_parameters())))))
         else:
             parameter_mses.append(0)
@@ -79,8 +79,7 @@ def run_experiment_repeated(experiment, exp_params, n_train, estimation_method, 
             divergence = ""
         prefix = f"results/{str(experiment.__name__)}/{str(experiment.__name__)}_method={estimation_method}{divergence}_n={n_train}"
         os.makedirs(os.path.dirname(prefix), exist_ok=True)
-        print(filename)
-        print(prefix + str(filename) + ".json")
+        print('Filepath: ', prefix + str(filename) + ".json")
         with open(prefix + filename + ".json", "w") as fp:
             json.dump(results, fp)
     return results
@@ -109,7 +108,7 @@ if __name__ == "__main__":
     parser.add_argument('--experiment', type=str, default='heteroskedastic')
     parser.add_argument('--exp_option', default=None)
     parser.add_argument('--n_train', type=int, default=100)
-    parser.add_argument('--method', type=str, default='KernelVMM')
+    parser.add_argument('--method', type=str, default='KernelFGEL')
     parser.add_argument('--rollouts', type=int, default=2)
 
     args = parser.parse_args()
