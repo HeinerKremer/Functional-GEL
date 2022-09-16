@@ -140,7 +140,7 @@ def optimize_hyperparams(model, moment_function, estimator_class, estimator_kwar
                                      dim_psi=dim_psi, dim_z=dim_z)
         if verbose:
             print('Running hyperparams: ', f'{hyper}')
-        estimator = estimator_class(model=model_wrapper, **hyper, **estimator_kwargs)
+        estimator = estimator_class(model=model_wrapper, val_loss_func=val_loss_func, **hyper, **estimator_kwargs)
         estimator.train(x_train, z_train, x_val, z_val)
 
         if val_loss_func is None:

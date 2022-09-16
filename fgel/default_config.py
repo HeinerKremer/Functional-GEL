@@ -139,7 +139,7 @@ methods = {
                 "theta_optim": 'oadam_gda',
                 "eval_freq": 100,
                 "max_num_epochs": 20000,},
-            'hyperparams': {'kl_reg_param': [1e0],
+            'hyperparams': {'kl_reg_param': [1e1, 1e0, 1e-1],
                             'reg_param': [1e-1, 1e-2, 1e-3, 1e-4, 1e-6, 1e-8],
                         }
         },

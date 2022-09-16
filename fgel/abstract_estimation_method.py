@@ -5,13 +5,14 @@ import torch
 
 
 class AbstractEstimationMethod:
-    def __init__(self, model, kernel_z_kwargs=None):
+    def __init__(self, model, kernel_z_kwargs=None, val_loss_func=None):
         self.model = model
         self.dim_psi = self.model.dim_psi
         self.dim_z = self.model.dim_z
         self.is_trained = False
+        self.val_loss_func = val_loss_func
 
-        # For validation purposes all methods for CMR use the kernel MMR loss and therefore require the kernel Gram matrices
+        # For validation purposes by default all methods for CMR use the kernel MMR loss and therefore require the kernel Gram matrices
         if kernel_z_kwargs is None:
             kernel_z_kwargs = {}
         self.kernel_z_kwargs = kernel_z_kwargs
@@ -54,7 +55,10 @@ class AbstractEstimationMethod:
         return float(mse_moment_violation.detach().numpy())
 
     def calc_validation_metric(self, x_val, z_val):
-        if z_val is None:
+        if self.val_loss_func is not None:
+            val_data = {'t': x_val[0], 'y': x_val[1], 'z': z_val}
+            return self.val_loss_func(self.model, val_data)
+        elif z_val is None:
             return self._calc_val_moment_violation(x_val)
         else:
             return self._calc_val_mmr(x_val, z_val)

@@ -34,4 +34,4 @@ class KernelELKernel(KernelEL):
 
 if __name__ == '__main__':
     from experiments.tests import test_cmr_estimator
-    test_cmr_estimator(estimation_method='KernelELKernel', n_runs=1, n_train=100, hyperparams=None)
+    test_cmr_estimator(estimation_method='KernelELKernel', n_runs=1, n_train=1000, hyperparams=None)

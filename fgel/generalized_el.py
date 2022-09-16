@@ -28,8 +28,9 @@ class GeneralizedEL(AbstractEstimationMethod):
                  theta_optim=None, theta_optim_args=None, pretrain=True,
                  dual_optim=None, dual_optim_args=None, inneriters=None,
                  divergence=None, kernel_z_kwargs=None,
+                 val_loss_func=None,
                  verbose=2):
-        super().__init__(model=model, kernel_z_kwargs=kernel_z_kwargs)
+        super().__init__(model=model, kernel_z_kwargs=kernel_z_kwargs, val_loss_func=val_loss_func)
 
         if theta_optim_args is None:
             theta_optim_args = {"lr": 5e-4}
@@ -365,9 +366,8 @@ class GeneralizedEL(AbstractEstimationMethod):
                 cycle_num += 1
                 val_loss = self.calc_validation_metric(x_val, z_val)
                 if self.verbose:
-                    val_theta_obj, _ = self.objective(x_val_tensor, z_val_tensor)
-                    print("epoch %d, theta-obj=%f, val-mmr-loss=%f"
-                          % (epoch_i, val_theta_obj.detach().numpy(), val_loss))
+                    print("epoch %d, theta-obj=%f, val-loss=%f"
+                          % (epoch_i, obj, val_loss))
                 mmr.append(float(val_loss))
                 if val_loss < min_val_loss:
                     min_val_loss = val_loss
