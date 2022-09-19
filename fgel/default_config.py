@@ -1,18 +1,15 @@
-from experiments.exp_heteroskedastic import HeteroskedasticNoiseExperiment
-from experiments.exp_network_iv import NetworkIVExperiment
-
-from fgel.baselines.kernel_vmm import KernelVMM
-from fgel.baselines.least_squares import OrdinaryLeastSquares
-from fgel.baselines.kernel_mmr import KernelMMR
-from fgel.baselines.gmm import GMM
-from fgel.baselines.neural_vmm import NeuralVMM
-from fgel.baselines.sieve_minimum_distance import SMDIdentity, SMDHeteroskedastic
-from fgel.generalized_el import GeneralizedEL
-from fgel.kernel_kel import KernelELKernel
-from fgel.neural_kel import KernelELNeural
-from fgel.kernel_fgel import KernelFGEL
-from fgel.kel import KernelEL
-from fgel.neural_fgel import NeuralFGEL
+from fgel.methods.kernel_vmm import KernelVMM
+from fgel.methods.least_squares import OrdinaryLeastSquares
+from fgel.methods.kernel_mmr import KernelMMR
+from fgel.methods.gmm import GMM
+from fgel.methods.neural_vmm import NeuralVMM
+from fgel.methods.sieve_minimum_distance import SMDHeteroskedastic
+from fgel.methods.generalized_el import GeneralizedEL
+from fgel.methods.kernel_kel import KernelELKernel
+from fgel.methods.neural_kel import KernelELNeural
+from fgel.methods.kernel_fgel import KernelFGEL
+from fgel.methods.kel import KernelEL
+from fgel.methods.neural_fgel import NeuralFGEL
 
 
 methods = {

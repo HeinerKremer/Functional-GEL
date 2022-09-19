@@ -1,7 +1,6 @@
 import torch
-import numpy as np
 
-from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.methods.abstract_estimation_method import AbstractEstimationMethod
 
 
 class KernelMMR(AbstractEstimationMethod):

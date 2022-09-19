@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.methods.abstract_estimation_method import AbstractEstimationMethod
 from fgel.utils.sieve_basis import MultiOutputPolynomialSplineBasis
 from fgel.utils.torch_utils import torch_softplus, BatchIter
 

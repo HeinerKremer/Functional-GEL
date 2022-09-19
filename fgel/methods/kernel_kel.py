@@ -1,9 +1,7 @@
 import cvxpy as cvx
-import numpy as np
 import torch
 
-from fgel.kel import KernelEL
-from fgel.utils.rkhs_utils import get_rbf_kernel, compute_cholesky_factor
+from fgel.methods.kel import KernelEL
 from fgel.utils.torch_utils import Parameter
 
 cvx_solver = cvx.MOSEK

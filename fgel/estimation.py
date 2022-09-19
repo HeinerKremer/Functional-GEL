@@ -4,8 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from fgel.baselines.kernel_mmr import KernelMMR
-from fgel.baselines.least_squares import OrdinaryLeastSquares
+from fgel.methods.kernel_mmr import KernelMMR
+from fgel.methods.least_squares import OrdinaryLeastSquares
 from fgel.default_config import methods
 
 mr_estimators = ['OLS', 'GMM', 'GEL', 'KernelEL']

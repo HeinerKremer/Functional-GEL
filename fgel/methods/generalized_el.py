@@ -7,7 +7,7 @@ import torch
 import matplotlib.pyplot as plt
 import logging
 
-from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.methods.abstract_estimation_method import AbstractEstimationMethod
 from fgel.utils.oadam import OAdam
 from fgel.utils.torch_utils import Parameter, BatchIter, OptimizationError
 

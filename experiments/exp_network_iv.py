@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from experiments.abstract_experiment import AbstractExperiment
-from fgel.baselines.least_squares import OrdinaryLeastSquares
+from fgel.methods.least_squares import OrdinaryLeastSquares
 
 
 methods = ['OLS', 'KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelELKernel', 'KernelELNeural',

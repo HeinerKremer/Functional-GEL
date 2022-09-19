@@ -2,7 +2,7 @@ import cvxpy as cvx
 import numpy as np
 import torch
 
-from fgel.generalized_el import GeneralizedEL
+from fgel.methods.generalized_el import GeneralizedEL
 from fgel.utils.torch_utils import Parameter
 
 cvx_solver = cvx.MOSEK

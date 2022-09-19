@@ -507,7 +507,7 @@ def generate_table(n_train, test_metric='test_risk', remove_failed=False):
 
 if __name__ == "__main__":
     remove_failed = True
-    
+
     plot_results_over_sample_size(['OLS', 'KernelMMR', 'KernelVMM', 'NeuralVMM', 'KernelFGEL', 'NeuralFGEL',
                                    'KernelELKernel', 'KernelELNeural'],
                                   n_samples=[64, 128, 256, 512, 1024, 4096],

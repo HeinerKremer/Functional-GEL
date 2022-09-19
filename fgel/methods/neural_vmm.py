@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from fgel.neural_fgel import NeuralFGEL
+from fgel.methods.neural_fgel import NeuralFGEL
 
 
 class NeuralVMM(NeuralFGEL):

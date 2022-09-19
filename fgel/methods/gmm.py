@@ -2,7 +2,7 @@ import numpy as np
 import scipy.linalg, scipy.sparse
 import torch
 
-from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.methods.abstract_estimation_method import AbstractEstimationMethod
 
 
 class GMM(AbstractEstimationMethod):

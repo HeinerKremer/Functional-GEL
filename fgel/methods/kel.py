@@ -4,7 +4,7 @@ import torch
 
 from fgel.utils.rkhs_utils import get_rbf_kernel, compute_cholesky_factor
 from fgel.utils.torch_utils import Parameter
-from fgel.generalized_el import GeneralizedEL
+from fgel.methods.generalized_el import GeneralizedEL
 
 cvx_solver = cvx.MOSEK
 

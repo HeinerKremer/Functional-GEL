@@ -1,6 +1,5 @@
-from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.methods.abstract_estimation_method import AbstractEstimationMethod
 import torch
-import numpy as np
 
 
 class OrdinaryLeastSquares(AbstractEstimationMethod):

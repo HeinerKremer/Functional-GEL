@@ -2,7 +2,7 @@ import numpy as np
 import scipy.linalg
 import torch
 
-from fgel.abstract_estimation_method import AbstractEstimationMethod
+from fgel.methods.abstract_estimation_method import AbstractEstimationMethod
 
 
 class KernelVMM(AbstractEstimationMethod):

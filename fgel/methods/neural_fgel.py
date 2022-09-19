@@ -1,8 +1,7 @@
 import torch
 
-from fgel.baselines.least_squares import OrdinaryLeastSquares
-from fgel.generalized_el import GeneralizedEL
-from fgel.utils.torch_utils import ModularMLPModel, Parameter
+from fgel.methods.generalized_el import GeneralizedEL
+from fgel.utils.torch_utils import ModularMLPModel
 
 
 class NeuralFGEL(GeneralizedEL):
