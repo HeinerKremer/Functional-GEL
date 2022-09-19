@@ -31,7 +31,7 @@ experiment_setups = {
         {
             'exp_class': NetworkIVExperiment,
             'exp_params': {'ftype': ['abs', 'step', 'sin', 'linear']},
-            'n_train': [200],
+            'n_train': [2000],
             'methods': ['OLS', 'KernelMMR', 'SMD', 'KernelVMM', 'NeuralVMM', 'KernelELKernel', 'KernelELNeural',
                         'KernelFGEL-chi2', 'KernelFGEL-kl', 'KernelFGEL-log',
                         'NeuralFGEL-chi2', 'NeuralFGEL-kl', 'NeuralFGEL-log', ],
